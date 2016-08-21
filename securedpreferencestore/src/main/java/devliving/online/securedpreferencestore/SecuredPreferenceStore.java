@@ -31,30 +31,20 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     static SecuredPreferenceStore mInstance;
 
-    private SecuredPreferenceStore(Context appContext) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException {
+    private SecuredPreferenceStore(Context appContext) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException, NoSuchPaddingException, InvalidKeyException {
         mPrefs = appContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE);
 
-        mEncryptionManager = new EncryptionManager(appContext);
+        mEncryptionManager = new EncryptionManager(appContext, mPrefs);
     }
 
     synchronized public static SecuredPreferenceStore getSharedInstance(Context appContext) {
         if (mInstance == null) {
             try {
                 mInstance = new SecuredPreferenceStore(appContext);
-            } catch (CertificateException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (KeyStoreException e) {
-                e.printStackTrace();
-            } catch (UnrecoverableEntryException e) {
-                e.printStackTrace();
-            } catch (NoSuchProviderException e) {
-                e.printStackTrace();
-            } catch (InvalidAlgorithmParameterException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
+
+                throw new RuntimeException(e);
             }
         }
 
@@ -66,17 +56,11 @@ public class SecuredPreferenceStore implements SharedPreferences {
         Map<String, ?> all = mPrefs.getAll();
         Map<String, String> dAll = new HashMap<>(all.size());
 
-        if (all != null) {
+        if (all.size() > 0) {
             for (String key : all.keySet()) {
                 try {
-                    dAll.put(mEncryptionManager.decrypt(key), mEncryptionManager.decrypt((String) all.get(key)));
-                } catch (InvalidKeyException e) {
-                    e.printStackTrace();
-                } catch (NoSuchAlgorithmException e) {
-                    e.printStackTrace();
-                } catch (NoSuchPaddingException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
+                    dAll.put(key, mEncryptionManager.decrypt((String) all.get(key)));
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
@@ -88,16 +72,10 @@ public class SecuredPreferenceStore implements SharedPreferences {
     @Override
     public String getString(String s, String s1) {
         try {
-            String key = mEncryptionManager.encrypt(s);
+            String key = mEncryptionManager.getHashed(s);
             String value = mPrefs.getString(key, null);
-            return mEncryptionManager.decrypt(value);
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+            if (value != null) return mEncryptionManager.decrypt(value);
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -108,7 +86,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
     @Override
     public Set<String> getStringSet(String s, Set<String> set) {
         try {
-            String key = mEncryptionManager.encrypt(s);
+            String key = mEncryptionManager.getHashed(s);
             Set<String> eSet = mPrefs.getStringSet(key, null);
 
             if (eSet != null) {
@@ -121,13 +99,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
                 return dSet;
             }
 
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
@@ -173,17 +145,12 @@ public class SecuredPreferenceStore implements SharedPreferences {
     @Override
     public boolean contains(String s) {
         try {
-            String key = mEncryptionManager.encrypt(s);
+            String key = mEncryptionManager.getHashed(s);
             return mPrefs.contains(key);
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (NoSuchPaddingException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
+
         return false;
     }
 
@@ -214,25 +181,20 @@ public class SecuredPreferenceStore implements SharedPreferences {
         @Override
         public SharedPreferences.Editor putString(String s, String s1) {
             try {
-                String key = mEncryptionManager.encrypt(s);
+                String key = mEncryptionManager.getHashed(s);
                 String value = mEncryptionManager.encrypt(s1);
                 mEditor.putString(key, value);
-            } catch (InvalidKeyException e) {
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (NoSuchPaddingException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
+
             return this;
         }
 
         @Override
         public SharedPreferences.Editor putStringSet(String s, Set<String> set) {
             try {
-                String key = mEncryptionManager.encrypt(s);
+                String key = mEncryptionManager.getHashed(s);
                 Set<String> eSet = new HashSet<String>(set.size());
 
                 for (String val : set) {
@@ -240,15 +202,10 @@ public class SecuredPreferenceStore implements SharedPreferences {
                 }
 
                 mEditor.putStringSet(key, eSet);
-            } catch (InvalidKeyException e) {
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (NoSuchPaddingException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
+
             return this;
         }
 
@@ -279,17 +236,12 @@ public class SecuredPreferenceStore implements SharedPreferences {
         @Override
         public SharedPreferences.Editor remove(String s) {
             try {
-                String key = mEncryptionManager.encrypt(s);
+                String key = mEncryptionManager.getHashed(s);
                 mEditor.remove(key);
-            } catch (InvalidKeyException e) {
-                e.printStackTrace();
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            } catch (NoSuchPaddingException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
+
             return this;
         }
 

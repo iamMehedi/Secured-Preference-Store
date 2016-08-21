@@ -15,55 +15,49 @@
         tools:context="devliving.online.securedpreferencestoresample.MainActivity">
 
         <EditText
-            android:id="@+id/text_key"
+            android:id="@+id/text_value_1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:lines="1"
-            android:inputType="text"
-            android:hint="Key"
-            android:text="text_key"
-            android:editable="false" />
+            android:inputType="textCapWords"
+            android:hint="text" />
 
         <EditText
-            android:id="@+id/text_value"
+            android:id="@+id/text_value_2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:lines="2"
             android:inputType="text"
-            android:hint="Value" />
+            android:hint="long text" />
 
         <EditText
-            android:id="@+id/number_key"
+            android:id="@+id/number_1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:lines="1"
-            android:inputType="text"
-            android:hint="Key"
-            android:layout_marginTop="8dp"
-            android:text="number_key"
-            android:editable="false" />
+            android:inputType="number"
+            android:hint="number"
+            android:layout_marginTop="8dp" />
 
         <EditText
-            android:id="@+id/number_value"
+            android:id="@+id/number_2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:lines="1"
             android:inputType="numberDecimal"
-            android:hint="Value" />
+            android:hint="decimal number" />
 
         <EditText
-            android:id="@+id/date_key"
+            android:id="@+id/date_1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:lines="1"
-            android:inputType="text"
-            android:hint="Key"
-            android:layout_marginTop="8dp"
-            android:text="long_key"
-            android:editable="false" />
+            android:inputType="datetime"
+            android:hint="date time"
+            android:layout_marginTop="8dp" />
 
         <CalendarView
-            android:id="@+id/date_value"
+            android:id="@+id/date_2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
 

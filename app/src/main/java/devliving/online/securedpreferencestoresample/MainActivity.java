@@ -2,32 +2,38 @@ package devliving.online.securedpreferencestoresample;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CalendarView;
 import android.widget.EditText;
 
+import java.util.Calendar;
+import java.util.Date;
+
 import devliving.online.securedpreferencestore.SecuredPreferenceStore;
 
 public class MainActivity extends AppCompatActivity {
 
-    EditText textKey, numberKey, dateKey, textValue, numberValue;
-    CalendarView dateValue;
+    EditText text1, number1, date1, text2, number2;
+    CalendarView date2;
 
     Button reloadButton, saveButton;
+
+    String TEXT_1 = "text_short", TEXT_2 = "text_long", NUMBER_1 = "number_int", NUMBER_2 = "number_float", DATE_1 = "date_text", DATE_2 = "date_long";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        textKey = (EditText) findViewById(R.id.text_key);
-        numberKey = (EditText) findViewById(R.id.number_key);
-        dateKey = (EditText) findViewById(R.id.date_key);
+        text1 = (EditText) findViewById(R.id.text_value_1);
+        number1 = (EditText) findViewById(R.id.number_1);
+        date1 = (EditText) findViewById(R.id.date_1);
 
-        textValue = (EditText) findViewById(R.id.text_key);
-        numberValue = (EditText) findViewById(R.id.number_value);
-        dateValue = (CalendarView) findViewById(R.id.date_value);
+        text2 = (EditText) findViewById(R.id.text_value_2);
+        number2 = (EditText) findViewById(R.id.number_2);
+        date2 = (CalendarView) findViewById(R.id.date_2);
 
         reloadButton = (Button) findViewById(R.id.reload);
         saveButton = (Button) findViewById(R.id.save);
@@ -52,27 +58,37 @@ public class MainActivity extends AppCompatActivity {
     void reloadData() {
         SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
 
-        String text = prefStore.getString(textKey.getText().toString(), null);
-        float number = prefStore.getFloat(numberKey.getText().toString(), -1);
-        long date = prefStore.getLong(dateKey.getText().toString(), 0);
+        String textShort = prefStore.getString(TEXT_1, null);
+        String textLong = prefStore.getString(TEXT_2, null);
+        int numberInt = prefStore.getInt(NUMBER_1, 0);
+        float numberFloat = prefStore.getFloat(NUMBER_2, -1);
+        String dateText = prefStore.getString(DATE_1, null);
+        long dateLong = prefStore.getLong(DATE_2, Calendar.getInstance().getTimeInMillis());
 
-        textValue.setText(text);
-        numberValue.setText(number != -1 ? String.valueOf(number) : null);
-        dateValue.setDate(date);
+        Log.d("SPS", "date value: " + dateLong);
+
+        text1.setText(textShort);
+        text2.setText(textLong);
+        number1.setText(String.valueOf(numberInt));
+        number2.setText(String.valueOf(numberFloat));
+        date1.setText(dateText);
+        date2.setDate(dateLong);
     }
 
     void saveData() {
         SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
 
-        if (textValue.length() > 0) {
-            prefStore.edit().putString(textKey.getText().toString(), textValue.getText().toString()).apply();
-        }
+        prefStore.edit().putString(TEXT_1, text1.length() > 0 ? text1.getText().toString() : null).apply();
+        prefStore.edit().putString(TEXT_2, text2.length() > 0 ? text2.getText().toString() : null).apply();
 
-        if (numberValue.length() > 0) {
-            float number = Float.parseFloat(numberValue.getText().toString().trim());
-            prefStore.edit().putFloat(numberKey.getText().toString(), number).apply();
-        }
+        prefStore.edit().putInt(NUMBER_1, number1.length() > 0 ? Integer.parseInt(number1.getText().toString().trim()) : 0).apply();
+        prefStore.edit().putFloat(NUMBER_2, number2.length() > 0 ? Float.parseFloat(number2.getText().toString().trim()) : 0).apply();
 
-        prefStore.edit().putLong(dateKey.getText().toString(), dateValue.getDate()).apply();
+        prefStore.edit().putString(DATE_1, date1.length() > 0 ? date1.getText().toString() : null).apply();
+
+        long dateVal = date2.getDate();
+        Log.d("SPS", "saving date value: " + dateVal);
+
+        prefStore.edit().putLong(DATE_2, date2.getDate()).apply();
     }
 }
