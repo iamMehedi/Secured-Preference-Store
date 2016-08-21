@@ -12,6 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -61,8 +62,26 @@ public class SecuredPreferenceStore implements SharedPreferences {
     }
 
     @Override
-    public Map<String, ?> getAll() {
-        return null;
+    public Map<String, String> getAll() {
+        Map<String, ?> all = mPrefs.getAll();
+        Map<String, String> dAll = new HashMap<>(all.size());
+
+        if (all != null) {
+            for (String key : all.keySet()) {
+                try {
+                    dAll.put(mEncryptionManager.decrypt(key), mEncryptionManager.decrypt((String) all.get(key)));
+                } catch (InvalidKeyException e) {
+                    e.printStackTrace();
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                } catch (NoSuchPaddingException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return dAll;
     }
 
     @Nullable
@@ -185,7 +204,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
             mPrefs.unregisterOnSharedPreferenceChangeListener(onSharedPreferenceChangeListener);
     }
 
-    class Editor implements SharedPreferences.Editor {
+    public class Editor implements SharedPreferences.Editor {
         SharedPreferences.Editor mEditor;
 
         public Editor() {
