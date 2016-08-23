@@ -8,6 +8,7 @@ import android.security.KeyPairGeneratorSpec;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
+import android.util.Log;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -217,11 +218,12 @@ class EncryptionManager {
         String key = getHashed(AES_KEY_ALIAS);
 
         if (!prefStore.contains(key)) {
-            byte[] keyData = new byte[AES_BIT_LENGTH / 4];
+            byte[] keyData = new byte[AES_BIT_LENGTH / 8];
             SecureRandom rng = new SecureRandom();
             rng.nextBytes(keyData);
 
             byte[] encryptedData = RSAEncrypt(keyData);
+
             String AESKey = Base64.encodeToString(encryptedData, Base64.DEFAULT);
             return prefStore.edit().putString(key, AESKey).commit();
         }
@@ -245,7 +247,7 @@ class EncryptionManager {
 
     void loadRSAKeys() throws KeyStoreException, UnrecoverableEntryException, NoSuchAlgorithmException {
         if (mStore.containsAlias(RSA_KEY_ALIAS) && mStore.entryInstanceOf(RSA_KEY_ALIAS, KeyStore.PrivateKeyEntry.class)) {
-            KeyStore.PrivateKeyEntry entry = (KeyStore.PrivateKeyEntry) mStore.getEntry(AES_KEY_ALIAS, null);
+            KeyStore.PrivateKeyEntry entry = (KeyStore.PrivateKeyEntry) mStore.getEntry(RSA_KEY_ALIAS, null);
             publicKey = (RSAPublicKey) entry.getCertificate().getPublicKey();
             privateKey = (RSAPrivateKey) entry.getPrivateKey();
         }

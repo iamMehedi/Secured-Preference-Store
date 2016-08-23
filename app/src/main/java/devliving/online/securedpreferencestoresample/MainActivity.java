@@ -16,7 +16,6 @@ import devliving.online.securedpreferencestore.SecuredPreferenceStore;
 public class MainActivity extends AppCompatActivity {
 
     EditText text1, number1, date1, text2, number2;
-    CalendarView date2;
 
     Button reloadButton, saveButton;
 
@@ -33,7 +32,6 @@ public class MainActivity extends AppCompatActivity {
 
         text2 = (EditText) findViewById(R.id.text_value_2);
         number2 = (EditText) findViewById(R.id.number_2);
-        date2 = (CalendarView) findViewById(R.id.date_2);
 
         reloadButton = (Button) findViewById(R.id.reload);
         saveButton = (Button) findViewById(R.id.save);
@@ -61,18 +59,14 @@ public class MainActivity extends AppCompatActivity {
         String textShort = prefStore.getString(TEXT_1, null);
         String textLong = prefStore.getString(TEXT_2, null);
         int numberInt = prefStore.getInt(NUMBER_1, 0);
-        float numberFloat = prefStore.getFloat(NUMBER_2, -1);
+        float numberFloat = prefStore.getFloat(NUMBER_2, 0);
         String dateText = prefStore.getString(DATE_1, null);
-        long dateLong = prefStore.getLong(DATE_2, Calendar.getInstance().getTimeInMillis());
-
-        Log.d("SPS", "date value: " + dateLong);
 
         text1.setText(textShort);
         text2.setText(textLong);
         number1.setText(String.valueOf(numberInt));
         number2.setText(String.valueOf(numberFloat));
         date1.setText(dateText);
-        date2.setDate(dateLong);
     }
 
     void saveData() {
@@ -85,10 +79,5 @@ public class MainActivity extends AppCompatActivity {
         prefStore.edit().putFloat(NUMBER_2, number2.length() > 0 ? Float.parseFloat(number2.getText().toString().trim()) : 0).apply();
 
         prefStore.edit().putString(DATE_1, date1.length() > 0 ? date1.getText().toString() : null).apply();
-
-        long dateVal = date2.getDate();
-        Log.d("SPS", "saving date value: " + dateVal);
-
-        prefStore.edit().putLong(DATE_2, date2.getDate()).apply();
     }
 }
