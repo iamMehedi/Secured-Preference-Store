@@ -30,6 +30,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Random;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -39,7 +40,9 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.x500.X500Principal;
 
@@ -51,7 +54,6 @@ class EncryptionManager {
     final int AES_BIT_LENGTH = 256;
     final int GCM_TAG_LENGTH = 128;
 
-    final String FIXED_IV = "SomeRandomIV"; //TODO enable randomized IV
     final String DEFAULT_CHARSET = "UTF-8";
 
     final String KEYSTORE_PROVIDER = "AndroidKeyStore";
@@ -61,6 +63,8 @@ class EncryptionManager {
     final String RSA_KEY_ALIAS = "sps_rsa_key";
     final String AES_KEY_ALIAS = "sps_aes_key";
 
+    final String DELIMITER = "]";
+
     final String RSA_CIPHER = KeyProperties.KEY_ALGORITHM_RSA + "/" +
             KeyProperties.BLOCK_MODE_ECB + "/" +
             KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1;
@@ -68,7 +72,7 @@ class EncryptionManager {
             KeyProperties.BLOCK_MODE_GCM + "/" +
             KeyProperties.ENCRYPTION_PADDING_NONE;
     final String AES_CIPHER_COMPAT = KeyProperties.KEY_ALGORITHM_AES + "/" +
-            KeyProperties.BLOCK_MODE_ECB + "/" +
+            KeyProperties.BLOCK_MODE_CBC + "/" +
             KeyProperties.ENCRYPTION_PADDING_PKCS7;
 
     KeyStore mStore;
@@ -85,21 +89,21 @@ class EncryptionManager {
         loadKey(prefStore);
     }
 
-    public byte[] encrypt(byte[] bytes) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException, BadPaddingException, NoSuchProviderException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
+    public byte[] encrypt(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException, BadPaddingException, NoSuchProviderException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
         if (bytes != null && bytes.length > 0) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || isCompatMode)
-                return encryptAESCompat(bytes);
-            else return encryptAES(bytes);
+                return encryptAESCompat(bytes, IV);
+            else return encryptAES(bytes, IV);
         }
 
         return null;
     }
 
-    public byte[] decrypt(byte[] bytes) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException, BadPaddingException, NoSuchProviderException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
+    public byte[] decrypt(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException, BadPaddingException, NoSuchProviderException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
         if (bytes != null && bytes.length > 0) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || isCompatMode)
-                return decryptAESCompat(bytes);
-            else return decryptAES(bytes);
+                return decryptAESCompat(bytes, IV);
+            else return decryptAES(bytes, IV);
         }
 
         return null;
@@ -107,8 +111,9 @@ class EncryptionManager {
 
     public String encrypt(String text) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IOException, IllegalBlockSizeException, InvalidAlgorithmParameterException, NoSuchProviderException, BadPaddingException {
         if (text != null && text.length() > 0) {
-            byte[] encrypted = encrypt(text.getBytes("UTF-8"));
-            return Base64.encodeToString(encrypted, Base64.DEFAULT);
+            byte[] IV = getIV();
+            byte[] encrypted = encrypt(text.getBytes("UTF-8"), getIV());
+            return Base64.encodeToString(IV, Base64.DEFAULT) + DELIMITER + Base64.encodeToString(encrypted, Base64.DEFAULT);
         }
 
         return null;
@@ -116,8 +121,10 @@ class EncryptionManager {
 
     public String decrypt(String text) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IOException, IllegalBlockSizeException, InvalidAlgorithmParameterException, NoSuchProviderException, BadPaddingException {
         if (text != null && text.length() > 0) {
-            byte[] bytes = Base64.decode(text, Base64.DEFAULT);
-            byte[] decrypted = decrypt(bytes);
+            String[] parts = text.split(DELIMITER);
+            byte[] IV = Base64.decode(parts[0], Base64.DEFAULT);
+            byte[] bytes = Base64.decode(parts[1], Base64.DEFAULT);
+            byte[] decrypted = decrypt(bytes, IV);
 
             return new String(decrypted, 0, decrypted.length, "UTF-8");
         }
@@ -129,9 +136,13 @@ class EncryptionManager {
         final MessageDigest digest = MessageDigest.getInstance("SHA-1");
         byte[] result = digest.digest(text.getBytes(DEFAULT_CHARSET));
 
+        return toHex(result);
+    }
+
+    String toHex(byte[] data) {
         StringBuilder sb = new StringBuilder();
 
-        for (byte b : result) {
+        for (byte b : data) {
             sb.append(String.format("%02X", b));
         }
 
@@ -144,32 +155,35 @@ class EncryptionManager {
     }
 
     byte[] getIV() throws UnsupportedEncodingException {
-        return FIXED_IV.getBytes(DEFAULT_CHARSET);
+        byte[] iv = new byte[16];
+        Random rng = new Random();
+        rng.nextBytes(iv);
+        return iv;
     }
 
     @TargetApi(Build.VERSION_CODES.KITKAT)
-    byte[] encryptAES(byte[] bytes) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, UnsupportedEncodingException {
+    byte[] encryptAES(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, UnsupportedEncodingException {
         Cipher cipher = Cipher.getInstance(AES_CIPHER);
-        cipher.init(Cipher.ENCRYPT_MODE, aesKey, new GCMParameterSpec(GCM_TAG_LENGTH, getIV()));
+        cipher.init(Cipher.ENCRYPT_MODE, aesKey, new GCMParameterSpec(GCM_TAG_LENGTH, IV));
         return cipher.doFinal(bytes);
     }
 
     @TargetApi(Build.VERSION_CODES.KITKAT)
-    byte[] decryptAES(byte[] bytes) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, UnsupportedEncodingException {
+    byte[] decryptAES(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, UnsupportedEncodingException {
         Cipher cipher = Cipher.getInstance(AES_CIPHER);
-        cipher.init(Cipher.DECRYPT_MODE, aesKey, new GCMParameterSpec(GCM_TAG_LENGTH, getIV()));
+        cipher.init(Cipher.DECRYPT_MODE, aesKey, new GCMParameterSpec(GCM_TAG_LENGTH, IV));
         return cipher.doFinal(bytes);
     }
 
-    byte[] encryptAESCompat(byte[] bytes) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+    byte[] encryptAESCompat(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, UnsupportedEncodingException, InvalidAlgorithmParameterException {
         Cipher c = Cipher.getInstance(AES_CIPHER_COMPAT, BOUNCY_CASTLE_PROVIDER);
-        c.init(Cipher.ENCRYPT_MODE, aesKey);
+        c.init(Cipher.ENCRYPT_MODE, aesKey, new IvParameterSpec(IV));
         return c.doFinal(bytes);
     }
 
-    byte[] decryptAESCompat(byte[] bytes) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException {
+    byte[] decryptAESCompat(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, UnsupportedEncodingException, InvalidAlgorithmParameterException {
         Cipher c = Cipher.getInstance(AES_CIPHER_COMPAT, BOUNCY_CASTLE_PROVIDER);
-        c.init(Cipher.DECRYPT_MODE, aesKey);
+        c.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(IV));
         return c.doFinal(bytes);
     }
 
@@ -218,11 +232,12 @@ class EncryptionManager {
         String key = getHashed(AES_KEY_ALIAS);
 
         if (!prefStore.contains(key)) {
-            byte[] keyData = new byte[AES_BIT_LENGTH / 8];
-            SecureRandom rng = new SecureRandom();
-            rng.nextBytes(keyData);
+            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
 
-            byte[] encryptedData = RSAEncrypt(keyData);
+            keyGen.init(AES_BIT_LENGTH);
+            SecretKey sKey = keyGen.generateKey();
+
+            byte[] encryptedData = RSAEncrypt(sKey.getEncoded());
 
             String AESKey = Base64.encodeToString(encryptedData, Base64.DEFAULT);
             return prefStore.edit().putString(key, AESKey).commit();
