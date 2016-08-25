@@ -8,7 +8,6 @@ import android.security.KeyPairGeneratorSpec;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
-import android.util.Log;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,7 +29,6 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Random;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -40,7 +38,6 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -81,8 +78,6 @@ class EncryptionManager {
     RSAPublicKey publicKey;
     RSAPrivateKey privateKey;
 
-    boolean isCompatMode = false; //TODO make it work
-
     EncryptionManager(Context context, SharedPreferences prefStore) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchProviderException, InvalidAlgorithmParameterException, UnrecoverableEntryException, InvalidKeyException, NoSuchPaddingException {
         loadKeyStore();
         generateKey(context, prefStore);
@@ -91,7 +86,7 @@ class EncryptionManager {
 
     public byte[] encrypt(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException, BadPaddingException, NoSuchProviderException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
         if (bytes != null && bytes.length > 0) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || isCompatMode)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
                 return encryptAESCompat(bytes, IV);
             else return encryptAES(bytes, IV);
         }
@@ -101,7 +96,7 @@ class EncryptionManager {
 
     public byte[] decrypt(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException, BadPaddingException, NoSuchProviderException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
         if (bytes != null && bytes.length > 0) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || isCompatMode)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
                 return decryptAESCompat(bytes, IV);
             else return decryptAES(bytes, IV);
         }
@@ -223,7 +218,7 @@ class EncryptionManager {
                         .setKeyValidityStart(start.getTime())
                         .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                         .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                        .setRandomizedEncryptionRequired(false) //TODO change it
+                        .setRandomizedEncryptionRequired(false) //TODO: set to true and let the Cipher generate a secured IV
                         .build();
                 keyGen.init(spec);
 
