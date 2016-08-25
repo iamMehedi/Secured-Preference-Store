@@ -2,7 +2,6 @@ package devliving.online.securedpreferencestore;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.support.annotation.Nullable;
 
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -68,7 +67,6 @@ public class SecuredPreferenceStore implements SharedPreferences {
         return dAll;
     }
 
-    @Nullable
     @Override
     public String getString(String s, String s1) {
         try {
@@ -82,7 +80,6 @@ public class SecuredPreferenceStore implements SharedPreferences {
         return null;
     }
 
-    @Nullable
     @Override
     public Set<String> getStringSet(String s, Set<String> set) {
         try {
