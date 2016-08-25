@@ -112,8 +112,8 @@ class EncryptionManager {
     public String encrypt(String text) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IOException, IllegalBlockSizeException, InvalidAlgorithmParameterException, NoSuchProviderException, BadPaddingException {
         if (text != null && text.length() > 0) {
             byte[] IV = getIV();
-            byte[] encrypted = encrypt(text.getBytes("UTF-8"), getIV());
-            return Base64.encodeToString(IV, Base64.DEFAULT) + DELIMITER + Base64.encodeToString(encrypted, Base64.DEFAULT);
+            byte[] encrypted = encrypt(text.getBytes(DEFAULT_CHARSET), IV);
+            return base64Encode(IV) + DELIMITER + base64Encode(encrypted);
         }
 
         return null;
@@ -122,11 +122,11 @@ class EncryptionManager {
     public String decrypt(String text) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IOException, IllegalBlockSizeException, InvalidAlgorithmParameterException, NoSuchProviderException, BadPaddingException {
         if (text != null && text.length() > 0) {
             String[] parts = text.split(DELIMITER);
-            byte[] IV = Base64.decode(parts[0], Base64.DEFAULT);
-            byte[] bytes = Base64.decode(parts[1], Base64.DEFAULT);
+            byte[] IV = base64Decode(parts[0]);
+            byte[] bytes = base64Decode(parts[1]);
             byte[] decrypted = decrypt(bytes, IV);
 
-            return new String(decrypted, 0, decrypted.length, "UTF-8");
+            return new String(decrypted, 0, decrypted.length, DEFAULT_CHARSET);
         }
 
         return null;
@@ -149,6 +149,14 @@ class EncryptionManager {
         return sb.toString();
     }
 
+    String base64Encode(byte[] data) {
+        return Base64.encodeToString(data, Base64.NO_WRAP);
+    }
+
+    byte[] base64Decode(String text) {
+        return Base64.decode(text, Base64.NO_WRAP);
+    }
+
     void loadKeyStore() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
         mStore = KeyStore.getInstance(KEYSTORE_PROVIDER);
         mStore.load(null);
@@ -156,7 +164,7 @@ class EncryptionManager {
 
     byte[] getIV() throws UnsupportedEncodingException {
         byte[] iv = new byte[16];
-        Random rng = new Random();
+        SecureRandom rng = new SecureRandom();
         rng.nextBytes(iv);
         return iv;
     }
