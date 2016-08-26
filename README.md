@@ -1,3 +1,5 @@
+[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-Secured--Preference--Store-green.svg?style=true)](https://android-arsenal.com/details/1/4226)
+
 # Secured-Preference-Store
 A `SharedPreferences` wrapper for Android that encrypts the content with 256 bit AES encryption. The Encryption key is securely stored in device's KeyStore.
 
@@ -17,7 +19,7 @@ A `SharedPreferences` wrapper for Android that encrypts the content with 256 bit
 compile 'online.devliving:securedpreferencestore:0.1.1'
 ```
 
-###Sample
+##Sample file content
 A sample secured preference file will look like:
 
 ```xml
@@ -37,7 +39,7 @@ hJCiChk90AQ9FhSkaF/Oum9KoWqg7NU0PGurK755VZflXfyn1vZ8hhTulW7BrA2o9HvT9tbju+bk
 </map>
 ``` 
 
-###License
+##License
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
