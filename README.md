@@ -1,4 +1,3 @@
-[ ![Download](https://api.bintray.com/packages/iammehedi/SecuredPreferenceStore/online.devliving%3Asecuredpreferencestore/images/download.svg) ](https://bintray.com/iammehedi/SecuredPreferenceStore/online.devliving%3Asecuredpreferencestore/_latestVersion)
 # Secured-Preference-Store
 A `SharedPreferences` wrapper for Android that encrypts the content with 256 bit AES encryption. The Encryption key is securely stored in device's KeyStore.
 
@@ -21,7 +20,7 @@ compile 'online.devliving:securedpreferencestore:0.1.1'
 ###Sample
 A sample secured preference file will look like:
 
-```
+```xml
 <?xml version='1.0' encoding='utf-8' standalone='yes' ?>
 <map>
     <string name="11CD15241CB4D6F953FA27C76F72C10920C5FADF14FF2824104FA5D67D25B43C">ZMnr87IlDKg81hKw2SQ6Lw==]dhP/ymX7CMSaCkP6jQvNig==</string>
@@ -37,3 +36,19 @@ hJCiChk90AQ9FhSkaF/Oum9KoWqg7NU0PGurK755VZflXfyn1vZ8hhTulW7BrA2o9HvT9tbju+bk
     <string name="9DCB904DFDA83286B41A329A7D8648B0BFF73C63E844C88800B2AA5119204845">XPuUd1t97pnwsOzzHY3OCA==]xqXJrEfcgDhYo2K4TTAvY9IQwP/tGctd4Fa1JT/1sB8=</string>
 </map>
 ``` 
+
+###License
+
+	Licensed under the Apache License, Version 2.0 (the "License");
+	you may not use this file except in compliance with the License.
+	You may obtain a copy of the License at
+
+	   http://www.apache.org/licenses/LICENSE-2.0
+
+	Unless required by applicable law or agreed to in writing, software
+	distributed under the License is distributed on an "AS IS" BASIS,
+	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	See the License for the specific language governing permissions and
+	limitations under the License.
+
+	Copyright 2016 Mehedi Hasan Khan
