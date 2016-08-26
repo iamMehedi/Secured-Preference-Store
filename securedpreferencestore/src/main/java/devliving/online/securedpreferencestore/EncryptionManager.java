@@ -128,7 +128,8 @@ class EncryptionManager {
     }
 
     public String getHashed(String text) throws NoSuchAlgorithmException, UnsupportedEncodingException {
-        final MessageDigest digest = MessageDigest.getInstance("SHA-1");
+        final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
         byte[] result = digest.digest(text.getBytes(DEFAULT_CHARSET));
 
         return toHex(result);
