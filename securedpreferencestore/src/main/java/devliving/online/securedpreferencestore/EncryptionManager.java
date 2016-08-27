@@ -96,6 +96,18 @@ public class EncryptionManager {
         loadKey(prefStore);
     }
 
+    /**
+     * @param bytes
+     * @return
+     * @throws NoSuchPaddingException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     * @throws IOException
+     * @throws BadPaddingException
+     * @throws NoSuchProviderException
+     * @throws IllegalBlockSizeException
+     * @throws InvalidAlgorithmParameterException
+     */
     public EncryptedData encrypt(byte[] bytes) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException, BadPaddingException, NoSuchProviderException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
         if (bytes != null && bytes.length > 0) {
             byte[] IV = getIV();
@@ -108,10 +120,18 @@ public class EncryptionManager {
     }
 
     /**
+     *
      * @param data
      * @return
-     * @throws GeneralSecurityException
      * @throws IOException
+     * @throws NoSuchPaddingException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchAlgorithmException
+     * @throws IllegalBlockSizeException
+     * @throws BadPaddingException
+     * @throws InvalidMacException
+     * @throws NoSuchProviderException
+     * @throws InvalidKeyException
      */
     public byte[] decrypt(EncryptedData data) throws IOException, NoSuchPaddingException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidMacException, NoSuchProviderException, InvalidKeyException {
         if (data != null && data.encryptedData != null) {
@@ -124,6 +144,7 @@ public class EncryptionManager {
     }
 
     /**
+     *
      * @param text
      * @return base64 encoded encrypted data
      * @throws InvalidKeyException
@@ -234,8 +255,8 @@ public class EncryptionManager {
 
     /**
      *
-     * @param bytes - data to encrypt
-     * @param IV - initialization vector
+     * @param bytes
+     * @param IV
      * @return IV & Encrypted data
      * @throws NoSuchPaddingException
      * @throws NoSuchAlgorithmException
