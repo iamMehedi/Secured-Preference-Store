@@ -91,8 +91,9 @@ class EncryptionManager {
         loadKey(prefStore);
     }
 
-    public EncryptedData encrypt(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException, BadPaddingException, NoSuchProviderException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
+    public EncryptedData encrypt(byte[] bytes) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException, BadPaddingException, NoSuchProviderException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
         if (bytes != null && bytes.length > 0) {
+            byte[] IV = getIV();
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
                 return encryptAESCompat(bytes, IV);
             else return encryptAES(bytes, IV);
@@ -117,10 +118,21 @@ class EncryptionManager {
         return null;
     }
 
+    /**
+     * @param text
+     * @return base64 encoded encrypted data
+     * @throws InvalidKeyException
+     * @throws NoSuchAlgorithmException
+     * @throws NoSuchPaddingException
+     * @throws IOException
+     * @throws IllegalBlockSizeException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchProviderException
+     * @throws BadPaddingException
+     */
     public String encrypt(String text) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IOException, IllegalBlockSizeException, InvalidAlgorithmParameterException, NoSuchProviderException, BadPaddingException {
         if (text != null && text.length() > 0) {
-            byte[] IV = getIV();
-            EncryptedData encrypted = encrypt(text.getBytes(DEFAULT_CHARSET), IV);
+            EncryptedData encrypted = encrypt(text.getBytes(DEFAULT_CHARSET));
             return encodeEncryptedData(encrypted);
         }
 
@@ -204,7 +216,12 @@ class EncryptionManager {
     }
 
     byte[] getIV() throws UnsupportedEncodingException {
-        byte[] iv = new byte[16];
+        byte[] iv;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            iv = new byte[12];
+        } else {
+            iv = new byte[16];
+        }
         SecureRandom rng = new SecureRandom();
         rng.nextBytes(iv);
         return iv;
@@ -498,11 +515,26 @@ class EncryptionManager {
         return dbytes;
     }
 
-    static class EncryptedData {
+    public static class EncryptedData {
         byte[] IV;
         byte[] encryptedData;
         byte[] mac;
 
+        public EncryptedData() {
+            IV = null;
+            encryptedData = null;
+            mac = null;
+        }
+
+        public EncryptedData(byte[] IV, byte[] encryptedData, byte[] mac) {
+            this.IV = IV;
+            this.encryptedData = encryptedData;
+            this.mac = mac;
+        }
+
+        /**
+         * @return IV + CIPHER
+         */
         byte[] getDataForMacComputation() {
             byte[] combinedData = new byte[IV.length + encryptedData.length];
             System.arraycopy(IV, 0, combinedData, 0, IV.length);
