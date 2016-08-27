@@ -1,24 +1,44 @@
 [![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-Secured--Preference--Store-green.svg?style=true)](https://android-arsenal.com/details/1/4226)
 
 # Secured-Preference-Store
-A `SharedPreferences` wrapper for Android that encrypts the content with 256 bit AES encryption. The Encryption key is securely stored in device's KeyStore.
+A `SharedPreferences` wrapper for Android that encrypts the content with 256 bit AES encryption. The Encryption key is securely stored in device's KeyStore. You can also use the `EncryptionManager` class to encrypt & decrypt data out of the box. 
 
-##Usage
+##Setup
 ###Maven
 ```
 <dependency>
   <groupId>online.devliving</groupId>
   <artifactId>securedpreferencestore</artifactId>
-  <version>0.1.1</version>
+  <version>0.2.0</version>
   <type>pom</type>
 </dependency>
 ```
 
 ###Gradle
 ```
-compile 'online.devliving:securedpreferencestore:0.1.1'
+compile 'online.devliving:securedpreferencestore:0.2.0'
 ```
 
+##Usage
+You can use the secured preference store just like the way you use the default `SharedPrefences`
+```java
+SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
+
+String textShort = prefStore.getString(TEXT_1, null);
+String textLong = prefStore.getString(TEXT_2, null);
+int numberInt = prefStore.getInt(NUMBER_1, 0);
+
+prefStore.edit().putString(TEXT_1, text1.length() > 0 ? text1.getText().toString() : null).apply();
+prefStore.edit().putString(TEXT_2, text2.length() > 0 ? text2.getText().toString() : null).apply();
+prefStore.edit().putInt(NUMBER_1, number1.length() > 0 ? Integer.parseInt(number1.getText().toString().trim()) : 0).commit();
+```
+
+You can use the `EncryptionManager` to encrypt/decrypt data on your own:
+```java
+EncryptionManager encryptionManager = new EncryptionManager(getApplicationContext(), getSharedPreferences("my_pref", MODE_PRIVATE));
+EncryptionManager.EncryptedData encryptedData = encryptionManager.encrypt(bytesToEncrypt);
+byte[] decryptedData = encryptionManager.decrypt(encryptedData);
+```
 ##Sample file content
 A sample secured preference file will look like:
 
