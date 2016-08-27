@@ -1,5 +1,6 @@
 package devliving.online.securedpreferencestoresample;
 
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -8,9 +9,20 @@ import android.widget.Button;
 import android.widget.CalendarView;
 import android.widget.EditText;
 
+import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.UnrecoverableEntryException;
+import java.security.cert.CertificateException;
 import java.util.Calendar;
 import java.util.Date;
 
+import javax.crypto.NoSuchPaddingException;
+
+import devliving.online.securedpreferencestore.EncryptionManager;
 import devliving.online.securedpreferencestore.SecuredPreferenceStore;
 
 public class MainActivity extends AppCompatActivity {
@@ -51,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
                 saveData();
             }
         });
+
     }
 
     void reloadData() {
