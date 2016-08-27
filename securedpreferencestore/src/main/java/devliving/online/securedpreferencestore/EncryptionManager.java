@@ -48,7 +48,7 @@ import javax.security.auth.x500.X500Principal;
 /**
  * Created by user on 8/21/16.
  */
-class EncryptionManager {
+public class EncryptionManager {
     final int RSA_BIT_LENGTH = 2048;
     final int AES_BIT_LENGTH = 256;
     final int MAC_BIT_LENGTH = 256;
@@ -85,7 +85,12 @@ class EncryptionManager {
     RSAPublicKey publicKey;
     RSAPrivateKey privateKey;
 
-    EncryptionManager(Context context, SharedPreferences prefStore) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchProviderException, InvalidAlgorithmParameterException, UnrecoverableEntryException, InvalidKeyException, NoSuchPaddingException {
+    boolean isCompatMode = false;
+
+    public EncryptionManager(Context context, SharedPreferences prefStore) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchProviderException, InvalidAlgorithmParameterException, UnrecoverableEntryException, InvalidKeyException, NoSuchPaddingException {
+        String isCompatKey = getHashed(IS_COMPAT_MODE_KEY_ALIAS);
+        isCompatMode = prefStore.getBoolean(isCompatKey, Build.VERSION.SDK_INT < Build.VERSION_CODES.M);
+
         loadKeyStore();
         generateKey(context, prefStore);
         loadKey(prefStore);
@@ -94,7 +99,7 @@ class EncryptionManager {
     public EncryptedData encrypt(byte[] bytes) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IOException, BadPaddingException, NoSuchProviderException, IllegalBlockSizeException, InvalidAlgorithmParameterException {
         if (bytes != null && bytes.length > 0) {
             byte[] IV = getIV();
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+            if (isCompatMode)
                 return encryptAESCompat(bytes, IV);
             else return encryptAES(bytes, IV);
         }
@@ -110,7 +115,7 @@ class EncryptionManager {
      */
     public byte[] decrypt(EncryptedData data) throws IOException, NoSuchPaddingException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidMacException, NoSuchProviderException, InvalidKeyException {
         if (data != null && data.encryptedData != null) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+            if (isCompatMode)
                 return decryptAESCompat(data);
             else return decryptAES(data);
         }
@@ -181,11 +186,11 @@ class EncryptionManager {
         return sb.toString();
     }
 
-    String base64Encode(byte[] data) {
+    public String base64Encode(byte[] data) {
         return Base64.encodeToString(data, Base64.NO_WRAP);
     }
 
-    byte[] base64Decode(String text) {
+    public byte[] base64Decode(String text) {
         return Base64.decode(text, Base64.NO_WRAP);
     }
 
@@ -217,7 +222,7 @@ class EncryptionManager {
 
     byte[] getIV() throws UnsupportedEncodingException {
         byte[] iv;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (!isCompatMode) {
             iv = new byte[12];
         } else {
             iv = new byte[16];
@@ -304,7 +309,7 @@ class EncryptionManager {
     }
 
     void loadKey(SharedPreferences prefStore) throws KeyStoreException, UnrecoverableEntryException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InvalidKeyException, IOException {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (!isCompatMode) {
             if (mStore.containsAlias(AES_KEY_ALIAS) && mStore.entryInstanceOf(AES_KEY_ALIAS, KeyStore.SecretKeyEntry.class)) {
                 KeyStore.SecretKeyEntry entry = (KeyStore.SecretKeyEntry) mStore.getEntry(AES_KEY_ALIAS, null);
                 aesKey = entry.getSecretKey();
@@ -316,7 +321,7 @@ class EncryptionManager {
     }
 
     void generateKey(Context context, SharedPreferences prefStore) throws KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnrecoverableEntryException, NoSuchPaddingException, InvalidKeyException, IOException {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (!isCompatMode) {
             generateAESKey();
         } else {
             generateRSAKeys(context);
