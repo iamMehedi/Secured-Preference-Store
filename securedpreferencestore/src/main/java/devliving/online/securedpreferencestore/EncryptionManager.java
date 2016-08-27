@@ -135,7 +135,7 @@ public class EncryptionManager {
      * @throws NoSuchProviderException
      * @throws BadPaddingException
      */
-    public String encrypt(String text) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IOException, IllegalBlockSizeException, InvalidAlgorithmParameterException, NoSuchProviderException, BadPaddingException {
+    String encrypt(String text) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IOException, IllegalBlockSizeException, InvalidAlgorithmParameterException, NoSuchProviderException, BadPaddingException {
         if (text != null && text.length() > 0) {
             EncryptedData encrypted = encrypt(text.getBytes(DEFAULT_CHARSET));
             return encodeEncryptedData(encrypted);
@@ -157,7 +157,7 @@ public class EncryptionManager {
      * @throws NoSuchProviderException
      * @throws BadPaddingException
      */
-    public String decrypt(String text) throws IOException, NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidMacException, NoSuchProviderException, InvalidAlgorithmParameterException {
+    String decrypt(String text) throws IOException, NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidMacException, NoSuchProviderException, InvalidAlgorithmParameterException {
         if (text != null && text.length() > 0) {
             EncryptedData encryptedData = decodeEncryptedText(text);
             byte[] decrypted = decrypt(encryptedData);
@@ -475,16 +475,20 @@ public class EncryptionManager {
     }
 
     boolean verifyMac(byte[] mac, byte[] data) throws InvalidKeyException, NoSuchAlgorithmException {
-        byte[] actualMac = computeMac(data);
+        if (mac != null && data != null) {
+            byte[] actualMac = computeMac(data);
 
-        if (actualMac.length != mac.length) {
-            return false;
+            if (actualMac.length != mac.length) {
+                return false;
+            }
+            int result = 0;
+            for (int i = 0; i < actualMac.length; i++) {
+                result |= actualMac[i] ^ mac[i];
+            }
+            return result == 0;
         }
-        int result = 0;
-        for (int i = 0; i < actualMac.length; i++) {
-            result |= actualMac[i] ^ mac[i];
-        }
-        return result == 0;
+
+        return false;
     }
 
     byte[] RSAEncrypt(byte[] bytes) throws KeyStoreException, UnrecoverableEntryException, NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, IOException {
@@ -534,6 +538,30 @@ public class EncryptionManager {
         public EncryptedData(byte[] IV, byte[] encryptedData, byte[] mac) {
             this.IV = IV;
             this.encryptedData = encryptedData;
+            this.mac = mac;
+        }
+
+        public byte[] getIV() {
+            return IV;
+        }
+
+        public void setIV(byte[] IV) {
+            this.IV = IV;
+        }
+
+        public byte[] getEncryptedData() {
+            return encryptedData;
+        }
+
+        public void setEncryptedData(byte[] encryptedData) {
+            this.encryptedData = encryptedData;
+        }
+
+        public byte[] getMac() {
+            return mac;
+        }
+
+        public void setMac(byte[] mac) {
             this.mac = mac;
         }
 
