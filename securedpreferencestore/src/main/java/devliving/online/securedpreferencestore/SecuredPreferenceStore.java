@@ -50,6 +50,10 @@ public class SecuredPreferenceStore implements SharedPreferences {
         return mInstance;
     }
 
+    public EncryptionManager getEncryptionManager() {
+        return mEncryptionManager;
+    }
+
     @Override
     public Map<String, String> getAll() {
         Map<String, ?> all = mPrefs.getAll();
