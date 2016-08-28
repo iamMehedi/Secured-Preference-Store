@@ -143,6 +143,15 @@ public class SecuredPreferenceStore implements SharedPreferences {
         return b;
     }
 
+    public byte[] getBytes(String s) {
+        String val = getString(s, null);
+        if (val != null) {
+            return EncryptionManager.base64Decode(val);
+        }
+
+        return null;
+    }
+
     @Override
     public boolean contains(String s) {
         try {
@@ -234,10 +243,17 @@ public class SecuredPreferenceStore implements SharedPreferences {
             return putString(s, val);
         }
 
+        public SharedPreferences.Editor putBytes(String s, byte[] bytes) {
+            if (bytes != null) {
+                String val = EncryptionManager.base64Encode(bytes);
+                return putString(s, val);
+            } else return remove(s);
+        }
+
         @Override
         public SharedPreferences.Editor remove(String s) {
             try {
-                String key = mEncryptionManager.getHashed(s);
+                String key = EncryptionManager.getHashed(s);
                 mEditor.remove(key);
             } catch (Exception e) {
                 e.printStackTrace();

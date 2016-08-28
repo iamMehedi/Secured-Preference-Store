@@ -207,11 +207,11 @@ public class EncryptionManager {
         return sb.toString();
     }
 
-    public String base64Encode(byte[] data) {
+    public static String base64Encode(byte[] data) {
         return Base64.encodeToString(data, Base64.NO_WRAP);
     }
 
-    public byte[] base64Decode(String text) {
+    public static byte[] base64Decode(String text) {
         return Base64.decode(text, Base64.NO_WRAP);
     }
 
