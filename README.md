@@ -9,14 +9,14 @@ A `SharedPreferences` wrapper for Android that encrypts the content with 256 bit
 <dependency>
   <groupId>online.devliving</groupId>
   <artifactId>securedpreferencestore</artifactId>
-  <version>0.2.1</version>
+  <version>0.2.2</version>
   <type>pom</type>
 </dependency>
 ```
 
 ###Gradle
 ```
-compile 'online.devliving:securedpreferencestore:0.2.1'
+compile 'online.devliving:securedpreferencestore:0.2.2'
 ```
 
 ##Usage
