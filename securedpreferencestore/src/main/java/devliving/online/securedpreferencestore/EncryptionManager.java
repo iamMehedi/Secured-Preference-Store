@@ -54,7 +54,7 @@ public class EncryptionManager {
     final int MAC_BIT_LENGTH = 256;
     final int GCM_TAG_LENGTH = 128;
 
-    final String DEFAULT_CHARSET = "UTF-8";
+    final static String DEFAULT_CHARSET = "UTF-8";
 
     final String KEYSTORE_PROVIDER = "AndroidKeyStore";
     final String SSL_PROVIDER = "AndroidOpenSSL";
@@ -189,7 +189,7 @@ public class EncryptionManager {
         return null;
     }
 
-    public String getHashed(String text) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+    public static String getHashed(String text) throws NoSuchAlgorithmException, UnsupportedEncodingException {
         final MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
         byte[] result = digest.digest(text.getBytes(DEFAULT_CHARSET));
@@ -197,7 +197,7 @@ public class EncryptionManager {
         return toHex(result);
     }
 
-    String toHex(byte[] data) {
+    static String toHex(byte[] data) {
         StringBuilder sb = new StringBuilder();
 
         for (byte b : data) {
