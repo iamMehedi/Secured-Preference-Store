@@ -81,7 +81,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
             e.printStackTrace();
         }
 
-        return null;
+        return s1;
     }
 
     @Override
