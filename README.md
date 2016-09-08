@@ -1,4 +1,5 @@
 [![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-Secured--Preference--Store-green.svg?style=true)](https://android-arsenal.com/details/1/4226)
+ [![Download](https://api.bintray.com/packages/iammehedi/SecuredPreferenceStore/online.devliving%3Asecuredpreferencestore/images/download.svg) ](https://bintray.com/iammehedi/SecuredPreferenceStore/online.devliving%3Asecuredpreferencestore/_latestVersion)
 
 # Secured-Preference-Store
 A `SharedPreferences` wrapper for Android that encrypts the content with 256 bit AES encryption. The Encryption key is securely stored in device's KeyStore. You can also use the `EncryptionManager` class to encrypt & decrypt data out of the box. 
@@ -9,14 +10,14 @@ A `SharedPreferences` wrapper for Android that encrypts the content with 256 bit
 <dependency>
   <groupId>online.devliving</groupId>
   <artifactId>securedpreferencestore</artifactId>
-  <version>0.2.3</version>
+  <version>latest_version</version>
   <type>pom</type>
 </dependency>
-```
+````
 
 ###Gradle
 ```
-compile 'online.devliving:securedpreferencestore:0.2.3'
+compile 'online.devliving:securedpreferencestore:latest_version'
 ```
 
 ##Usage
