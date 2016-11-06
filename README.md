@@ -63,6 +63,8 @@ hJCiChk90AQ9FhSkaF/Oum9KoWqg7NU0PGurK755VZflXfyn1vZ8hhTulW7BrA2o9HvT9tbju+bk
 ##NOTICE
 The keys stored in the `KeyStore` aren't encrypted at rest to avoid [the issue](https://code.google.com/p/android/issues/detail?id=61989) where they get deleted when the device's lock screen protection changes. So if the device doesn't have a hardware backed key storage then the keys might be at a vulnerable state. You can read more about it [here](http://doridori.github.io/android-security-the-forgetful-keystore).
 
+*Keys still get deleted in API levels lower than 21 and the library currently has no way of recovering from it*
+
 ##License
 
 	Licensed under the Apache License, Version 2.0 (the "License");
