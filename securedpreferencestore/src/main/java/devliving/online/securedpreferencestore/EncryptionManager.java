@@ -46,46 +46,59 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.x500.X500Principal;
 
 /**
- * Created by user on 8/21/16.
+ * Created by Mehedi on 8/21/16.
  */
 public class EncryptionManager {
-    final int RSA_BIT_LENGTH = 2048;
-    final int AES_BIT_LENGTH = 256;
-    final int MAC_BIT_LENGTH = 256;
-    final int GCM_TAG_LENGTH = 128;
+    private final int RSA_BIT_LENGTH = 2048;
+    private final int AES_BIT_LENGTH = 256;
+    private final int MAC_BIT_LENGTH = 256;
+    private final int GCM_TAG_LENGTH = 128;
 
-    final static String DEFAULT_CHARSET = "UTF-8";
+    private final static String DEFAULT_CHARSET = "UTF-8";
 
-    final String KEYSTORE_PROVIDER = "AndroidKeyStore";
-    final String SSL_PROVIDER = "AndroidOpenSSL";
-    final String BOUNCY_CASTLE_PROVIDER = "BC";
+    private final String KEYSTORE_PROVIDER = "AndroidKeyStore";
+    private final String SSL_PROVIDER = "AndroidOpenSSL";
+    private final String BOUNCY_CASTLE_PROVIDER = "BC";
 
-    final String RSA_KEY_ALIAS = "sps_rsa_key";
-    final String AES_KEY_ALIAS = "sps_aes_key";
-    final String MAC_KEY_ALIAS = "sps_mac_key";
+    private final String RSA_KEY_ALIAS = "sps_rsa_key";
+    private final String AES_KEY_ALIAS = "sps_aes_key";
+    private final String MAC_KEY_ALIAS = "sps_mac_key";
 
-    final String DELIMITER = "]";
+    private final String DELIMITER = "]";
 
-    final String RSA_CIPHER = KeyProperties.KEY_ALGORITHM_RSA + "/" +
-            KeyProperties.BLOCK_MODE_ECB + "/" +
-            KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1;
-    final String AES_CIPHER = KeyProperties.KEY_ALGORITHM_AES + "/" +
-            KeyProperties.BLOCK_MODE_GCM + "/" +
-            KeyProperties.ENCRYPTION_PADDING_NONE;
-    final String AES_CIPHER_COMPAT = KeyProperties.KEY_ALGORITHM_AES + "/" +
-            KeyProperties.BLOCK_MODE_CBC + "/" +
-            KeyProperties.ENCRYPTION_PADDING_PKCS7;
-    final String MAC_CIPHER = "HmacSHA256";
-    final String IS_COMPAT_MODE_KEY_ALIAS = "sps_data_in_compat";
+    private static final String KEY_ALGORITHM_AES = "AES";
+    private static final String KEY_ALGORITHM_RSA = "RSA";
 
-    KeyStore mStore;
-    SecretKey aesKey;
-    SecretKey macKey;
+    private static final String BLOCK_MODE_ECB = "ECB";
+    private static final String BLOCK_MODE_GCM = "GCM";
+    private static final String BLOCK_MODE_CBC = "CBC";
 
-    RSAPublicKey publicKey;
-    RSAPrivateKey privateKey;
+    private static final String ENCRYPTION_PADDING_RSA_PKCS1 = "PKCS1Padding";
+    private static final String ENCRYPTION_PADDING_PKCS7 = "PKCS7Padding";
+    private static final String ENCRYPTION_PADDING_NONE = "NoPadding";
+    private static final String MAC_ALGORITHM_HMAC_SHA256 = "HmacSHA256";
 
-    boolean isCompatMode = false;
+    private final String RSA_CIPHER = KEY_ALGORITHM_RSA + "/" +
+            BLOCK_MODE_ECB + "/" +
+            ENCRYPTION_PADDING_RSA_PKCS1;
+    private final String AES_CIPHER = KEY_ALGORITHM_AES + "/" +
+            BLOCK_MODE_GCM + "/" +
+            ENCRYPTION_PADDING_NONE;
+    private final String AES_CIPHER_COMPAT = KEY_ALGORITHM_AES + "/" +
+            BLOCK_MODE_CBC + "/" +
+            ENCRYPTION_PADDING_PKCS7;
+    private final String MAC_CIPHER = MAC_ALGORITHM_HMAC_SHA256;
+
+    private final String IS_COMPAT_MODE_KEY_ALIAS = "sps_data_in_compat";
+
+    private KeyStore mStore;
+    private SecretKey aesKey;
+    private SecretKey macKey;
+
+    private RSAPublicKey publicKey;
+    private RSAPrivateKey privateKey;
+
+    private boolean isCompatMode = false;
 
     public EncryptionManager(Context context, SharedPreferences prefStore) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchProviderException, InvalidAlgorithmParameterException, UnrecoverableEntryException, InvalidKeyException, NoSuchPaddingException {
         String isCompatKey = getHashed(IS_COMPAT_MODE_KEY_ALIAS);
@@ -454,13 +467,14 @@ public class EncryptionManager {
         }
     }
 
+    @SuppressWarnings("WrongConstant")
     void generateRSAKeys(Context context) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, KeyStoreException {
         if (!mStore.containsAlias(RSA_KEY_ALIAS)) {
             Calendar start = Calendar.getInstance();
             Calendar end = Calendar.getInstance();
             end.add(Calendar.YEAR, 25);
 
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_RSA, KEYSTORE_PROVIDER);
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(KEY_ALGORITHM_RSA, KEYSTORE_PROVIDER);
 
             KeyPairGeneratorSpec spec;
 
@@ -468,7 +482,7 @@ public class EncryptionManager {
                 spec = new KeyPairGeneratorSpec.Builder(context)
                         .setAlias(RSA_KEY_ALIAS)
                         .setKeySize(RSA_BIT_LENGTH)
-                        .setKeyType(KeyProperties.KEY_ALGORITHM_RSA)
+                        .setKeyType(KEY_ALGORITHM_RSA)
                         .setEndDate(end.getTime())
                         .setStartDate(start.getTime())
                         .setSerialNumber(BigInteger.ONE)
