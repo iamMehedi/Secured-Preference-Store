@@ -7,7 +7,7 @@ import java.security.KeyStoreException;
 import java.util.List;
 
 /**
- * Created by Mehedi Hasan Khan <mehedi.mailing@gmail.com> on 12/31/16.
+ * Created by Mehedi Hasan Khan (mehedi.mailing@gmail.com) on 12/31/16.
  */
 
 public class DefaultRecoveryHandler extends RecoveryHandler {
