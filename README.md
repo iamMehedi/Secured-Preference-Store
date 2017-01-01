@@ -63,7 +63,18 @@ hJCiChk90AQ9FhSkaF/Oum9KoWqg7NU0PGurK755VZflXfyn1vZ8hhTulW7BrA2o9HvT9tbju+bk
 ##NOTICE
 The keys stored in the `KeyStore` aren't encrypted at rest to avoid [the issue](https://code.google.com/p/android/issues/detail?id=61989) where they get deleted when the device's lock screen protection changes. So if the device doesn't have a hardware backed key storage then the keys might be at a vulnerable state. You can read more about it [here](http://doridori.github.io/android-security-the-forgetful-keystore).
 
-**Keys still get deleted in API levels lower than 21 and the library currently has no way of recovering from it.**
+##Recovery
+Keys get **deleted/locked in API levels lower than 21** and sometimes on later versions of the API on some devices when the user changes the device's security (screen lock protection). This phenomena is due to few issues in the `Keystore` implementation i.e [61989](https://code.google.com/p/android/issues/detail?id=61989), [177459](https://code.google.com/p/android/issues/detail?id=177459). Until those issues are fixed we need a way to recover from that scenario, otherwise the app itself might become unusable. To enable recovery you can add a `RecoveryHandler` to `SecuredPreferenceStore` before calling `getSharedInstance` for the first time. 
+
+```java
+SecuredPreferenceStore.setRecoveryHandler(new RecoveryHandler() {
+            @Override
+            protected void recover(Exception e, KeyStore keyStore, List<String> keyAliases, SharedPreferences preferences) {
+                //Your recovery code goes here
+            }
+        });
+```
+A default recovery handler called `DefaultRecoveryHandler` is included in the library which deletes the keys and data, giving the library a chance to start over. 
 
 ##License
 
