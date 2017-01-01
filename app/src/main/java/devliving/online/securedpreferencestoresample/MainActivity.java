@@ -1,13 +1,13 @@
 package devliving.online.securedpreferencestoresample;
 
-import android.preference.PreferenceManager;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CalendarView;
 import android.widget.EditText;
+import android.widget.Toast;
+
+import com.jakewharton.processphoenix.ProcessPhoenix;
 
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -17,12 +17,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
-import java.util.Calendar;
-import java.util.Date;
 
 import javax.crypto.NoSuchPaddingException;
 
-import devliving.online.securedpreferencestore.EncryptionManager;
+import devliving.online.securedpreferencestore.DefaultRecoveryHandler;
+import devliving.online.securedpreferencestore.RecoveryHandler;
 import devliving.online.securedpreferencestore.SecuredPreferenceStore;
 
 public class MainActivity extends AppCompatActivity {
@@ -48,25 +47,54 @@ public class MainActivity extends AppCompatActivity {
         reloadButton = (Button) findViewById(R.id.reload);
         saveButton = (Button) findViewById(R.id.save);
 
-        reloadData();
+        SecuredPreferenceStore.setRecoveryHandler(new DefaultRecoveryHandler(new RecoveryHandler.RecoveryCallback() {
+            @Override
+            public void onRecoveryDone() {
+                Toast.makeText(MainActivity.this, "The app recovered from an error, some preference data might be lost. The app will now restart.", Toast.LENGTH_LONG).show();
+                ProcessPhoenix.triggerRebirth(getApplicationContext());
+            }
+
+            @Override
+            public void onRecoveryFailed(Exception ex) {
+                Toast.makeText(MainActivity.this, "An attempt to recover from an error has failed. The app will restart and try again," +
+                        "if the problem persists then reinstall the app.", Toast.LENGTH_LONG).show();
+                ProcessPhoenix.triggerRebirth(getApplicationContext());
+            }
+        }));
+
+        try {
+            reloadData();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
+        }
 
         reloadButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                reloadData();
+                try {
+                    reloadData();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(MainActivity.this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
         saveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                saveData();
+                try {
+                    saveData();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Toast.makeText(MainActivity.this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
+                }
             }
         });
-
     }
 
-    void reloadData() {
+    void reloadData() throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, KeyStoreException, NoSuchProviderException {
         SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
 
         String textShort = prefStore.getString(TEXT_1, null);
@@ -82,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
         date1.setText(dateText);
     }
 
-    void saveData() {
+    void saveData() throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, KeyStoreException, NoSuchProviderException {
         SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
 
         prefStore.edit().putString(TEXT_1, text1.length() > 0 ? text1.getText().toString() : null).apply();

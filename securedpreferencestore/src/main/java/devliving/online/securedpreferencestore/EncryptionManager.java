@@ -29,7 +29,9 @@ import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.List;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -100,13 +102,44 @@ public class EncryptionManager {
 
     private boolean isCompatMode = false;
 
-    public EncryptionManager(Context context, SharedPreferences prefStore) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, NoSuchProviderException, InvalidAlgorithmParameterException, UnrecoverableEntryException, InvalidKeyException, NoSuchPaddingException {
+    SecuredPreferenceStore.KeyStoreRecoveryNotifier mRecoveryHandler;
+
+    public EncryptionManager(Context context, SharedPreferences prefStore, SecuredPreferenceStore.KeyStoreRecoveryNotifier recoveryHandler)
+            throws IOException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, NoSuchProviderException, NoSuchPaddingException, CertificateException, KeyStoreException, UnrecoverableEntryException, InvalidKeyException, IllegalStateException {
         String isCompatKey = getHashed(IS_COMPAT_MODE_KEY_ALIAS);
         isCompatMode = prefStore.getBoolean(isCompatKey, Build.VERSION.SDK_INT < Build.VERSION_CODES.M);
+        mRecoveryHandler = recoveryHandler;
 
         loadKeyStore();
-        generateKey(context, prefStore);
-        loadKey(prefStore);
+
+        try {
+            generateKey(context, prefStore);
+            loadKey(prefStore);
+        } catch (KeyStoreException e) {
+            tryRecovery(e);
+        }
+        catch(UnrecoverableEntryException e1){
+            tryRecovery(e1);
+        }
+        catch(InvalidKeyException e2){
+            tryRecovery(e2);
+        }
+        catch (IllegalStateException e3){
+            tryRecovery(e3);
+        }
+        catch (IOException e4){
+            if(e4.getCause() != null && e4.getCause() instanceof BadPaddingException) tryRecovery(e4);
+            else throw e4;
+        }
+    }
+
+    <T extends Exception> void tryRecovery(T e) throws T {
+        if(mRecoveryHandler != null) mRecoveryHandler.onRecoveryRequired(e, mStore, keyAliases());
+        else throw e;
+    }
+
+    List<String> keyAliases(){
+        return Arrays.asList(AES_KEY_ALIAS, RSA_KEY_ALIAS);
     }
 
     /**
@@ -398,14 +431,14 @@ public class EncryptionManager {
         String key = getHashed(AES_KEY_ALIAS);
 
         if (!prefStore.contains(key)) {
-            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+            KeyGenerator keyGen = KeyGenerator.getInstance(KEY_ALGORITHM_AES);
 
             keyGen.init(AES_BIT_LENGTH);
             SecretKey sKey = keyGen.generateKey();
 
             byte[] encryptedData = RSAEncrypt(sKey.getEncoded());
 
-            String AESKey = Base64.encodeToString(encryptedData, Base64.NO_WRAP);
+            String AESKey = base64Encode(encryptedData);
             boolean result = prefStore.edit().putString(key, AESKey).commit();
             String isCompatKey = getHashed(IS_COMPAT_MODE_KEY_ALIAS);
             prefStore.edit().putBoolean(isCompatKey, true).apply();
@@ -436,7 +469,7 @@ public class EncryptionManager {
 
         String base64Value = prefStore.getString(key, null);
         if (base64Value != null) {
-            byte[] encryptedData = Base64.decode(base64Value, Base64.NO_WRAP);
+            byte[] encryptedData = base64Decode(base64Value);
             byte[] keyData = RSADecrypt(encryptedData);
 
             return new SecretKeySpec(keyData, "AES");
@@ -552,7 +585,7 @@ public class EncryptionManager {
 
         byte[] dbytes = new byte[values.size()];
         for (int i = 0; i < dbytes.length; i++) {
-            dbytes[i] = values.get(i).byteValue();
+            dbytes[i] = values.get(i);
         }
 
         cipherInputStream.close();
