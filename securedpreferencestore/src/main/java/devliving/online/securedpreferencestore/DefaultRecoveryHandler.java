@@ -18,7 +18,7 @@ public class DefaultRecoveryHandler extends RecoveryHandler {
     }
 
     @Override
-    void recover(Exception e, KeyStore keyStore, List<String> keyAliases, SharedPreferences preferences) {
+    protected void recover(Exception e, KeyStore keyStore, List<String> keyAliases, SharedPreferences preferences) {
         e.printStackTrace();
 
         try {
