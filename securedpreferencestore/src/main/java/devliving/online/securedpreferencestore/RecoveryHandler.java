@@ -12,7 +12,7 @@ import java.util.List;
  */
 
 public abstract class RecoveryHandler {
-    protected abstract void recover(Exception e, KeyStore keyStore, List<String> keyAliases, SharedPreferences preferences);
+    protected abstract boolean recover(Exception e, KeyStore keyStore, List<String> keyAliases, SharedPreferences preferences);
 
     void clearKeyStore(KeyStore keyStore, List<String> aliases) throws KeyStoreException {
         if(keyStore != null && aliases != null){
@@ -33,10 +33,5 @@ public abstract class RecoveryHandler {
 
     void clearPreferences(SharedPreferences preferences){
         if(preferences != null) preferences.edit().clear().apply();
-    }
-
-    public interface RecoveryCallback{
-        void onRecoveryDone();
-        void onRecoveryFailed(Exception ex);
     }
 }

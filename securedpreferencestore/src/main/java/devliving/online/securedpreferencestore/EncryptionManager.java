@@ -110,32 +110,38 @@ public class EncryptionManager {
         isCompatMode = prefStore.getBoolean(isCompatKey, Build.VERSION.SDK_INT < Build.VERSION_CODES.M);
         mRecoveryHandler = recoveryHandler;
 
+        boolean tryAgain = false;
+
         loadKeyStore();
 
         try {
             generateKey(context, prefStore);
             loadKey(prefStore);
         } catch (KeyStoreException e) {
-            tryRecovery(e);
+            tryAgain = tryRecovery(e);
         }
         catch(UnrecoverableEntryException e1){
-            tryRecovery(e1);
+            tryAgain = tryRecovery(e1);
         }
         catch(InvalidKeyException e2){
-            tryRecovery(e2);
+            tryAgain = tryRecovery(e2);
         }
         catch (IllegalStateException e3){
-            tryRecovery(e3);
+            tryAgain = tryRecovery(e3);
         }
         catch (IOException e4){
-            if(e4.getCause() != null && e4.getCause() instanceof BadPaddingException) tryRecovery(e4);
+            if(e4.getCause() != null && e4.getCause() instanceof BadPaddingException) tryAgain = tryRecovery(e4);
             else throw e4;
+        }
+
+        if(tryAgain){
+            generateKey(context, prefStore);
+            loadKey(prefStore);
         }
     }
 
-    <T extends Exception> void tryRecovery(T e) throws T {
-        if(mRecoveryHandler != null) mRecoveryHandler.onRecoveryRequired(e, mStore, keyAliases());
-        else throw e;
+    <T extends Exception> boolean tryRecovery(T e) throws T {
+        return mRecoveryHandler != null && mRecoveryHandler.onRecoveryRequired(e, mStore, keyAliases());
     }
 
     List<String> keyAliases(){

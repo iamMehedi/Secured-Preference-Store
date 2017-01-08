@@ -35,14 +35,14 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     private static SecuredPreferenceStore mInstance;
 
-    private SecuredPreferenceStore(Context appContext) throws CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException, NoSuchPaddingException, InvalidKeyException {
+    private SecuredPreferenceStore(Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
         Log.d("SECURE-PREFERENCE", "Creating store instance");
         mPrefs = appContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE);
 
         mEncryptionManager = new EncryptionManager(appContext, mPrefs, new KeyStoreRecoveryNotifier() {
             @Override
-            public void onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases) {
-                if(mRecoveryHandler != null) mRecoveryHandler.recover(e, keyStore, keyAliases, mPrefs);
+            public boolean onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases) {
+                if(mRecoveryHandler != null) return mRecoveryHandler.recover(e, keyStore, keyAliases, mPrefs);
                 else throw new RuntimeException(e);
             }
         });
@@ -291,6 +291,13 @@ public class SecuredPreferenceStore implements SharedPreferences {
     }
 
     public interface KeyStoreRecoveryNotifier{
-        void onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases);
+        /**
+         *
+         * @param e
+         * @param keyStore
+         * @param keyAliases
+         * @return true if the error could be resolved
+         */
+        boolean onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases);
     }
 }

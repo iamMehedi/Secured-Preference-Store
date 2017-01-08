@@ -1,5 +1,6 @@
 package devliving.online.securedpreferencestoresample;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -7,21 +8,20 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import com.jakewharton.processphoenix.ProcessPhoenix;
-
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
+import java.util.List;
 
 import javax.crypto.NoSuchPaddingException;
 
 import devliving.online.securedpreferencestore.DefaultRecoveryHandler;
-import devliving.online.securedpreferencestore.RecoveryHandler;
 import devliving.online.securedpreferencestore.SecuredPreferenceStore;
 
 public class MainActivity extends AppCompatActivity {
@@ -47,20 +47,13 @@ public class MainActivity extends AppCompatActivity {
         reloadButton = (Button) findViewById(R.id.reload);
         saveButton = (Button) findViewById(R.id.save);
 
-        SecuredPreferenceStore.setRecoveryHandler(new DefaultRecoveryHandler(new RecoveryHandler.RecoveryCallback() {
+        SecuredPreferenceStore.setRecoveryHandler(new DefaultRecoveryHandler(){
             @Override
-            public void onRecoveryDone() {
-                Toast.makeText(MainActivity.this, "The app recovered from an error, some preference data might be lost. The app will now restart.", Toast.LENGTH_LONG).show();
-                ProcessPhoenix.triggerRebirth(getApplicationContext());
+            protected boolean recover(Exception e, KeyStore keyStore, List<String> keyAliases, SharedPreferences preferences) {
+                Toast.makeText(MainActivity.this, "Encryption key got invalidated, will try to start over.", Toast.LENGTH_SHORT).show();
+                return super.recover(e, keyStore, keyAliases, preferences);
             }
-
-            @Override
-            public void onRecoveryFailed(Exception ex) {
-                Toast.makeText(MainActivity.this, "An attempt to recover from an error has failed. The app will restart and try again," +
-                        "if the problem persists then reinstall the app.", Toast.LENGTH_LONG).show();
-                ProcessPhoenix.triggerRebirth(getApplicationContext());
-            }
-        }));
+        });
 
         try {
             reloadData();
