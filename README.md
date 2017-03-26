@@ -4,8 +4,8 @@
 # Secured-Preference-Store
 A `SharedPreferences` wrapper for Android that encrypts the content with 256 bit AES encryption. The Encryption key is securely stored in device's KeyStore. You can also use the `EncryptionManager` class to encrypt & decrypt data out of the box. 
 
-##Setup
-###Maven
+## Setup
+### Maven
 ```
 <dependency>
   <groupId>online.devliving</groupId>
@@ -15,12 +15,12 @@ A `SharedPreferences` wrapper for Android that encrypts the content with 256 bit
 </dependency>
 ````
 
-###Gradle
+### Gradle
 ```
 compile 'online.devliving:securedpreferencestore:latest_version'
 ```
 
-##Usage
+## Usage
 You can use the secured preference store just like the way you use the default `SharedPrefences`
 ```java
 SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
@@ -40,7 +40,7 @@ EncryptionManager encryptionManager = new EncryptionManager(getApplicationContex
 EncryptionManager.EncryptedData encryptedData = encryptionManager.encrypt(bytesToEncrypt);
 byte[] decryptedData = encryptionManager.decrypt(encryptedData);
 ```
-##Sample file content
+## Sample file content
 A sample secured preference file will look like:
 
 ```xml
@@ -60,10 +60,10 @@ hJCiChk90AQ9FhSkaF/Oum9KoWqg7NU0PGurK755VZflXfyn1vZ8hhTulW7BrA2o9HvT9tbju+bk
 </map>
 ``` 
 
-##NOTICE
+## NOTICE
 The keys stored in the `KeyStore` aren't encrypted at rest to avoid [the issue](https://code.google.com/p/android/issues/detail?id=61989) where they get deleted when the device's lock screen protection changes. So if the device doesn't have a hardware backed key storage then the keys might be at a vulnerable state. You can read more about it [here](http://doridori.github.io/android-security-the-forgetful-keystore).
 
-##Recovery
+## Recovery
 Keys get **deleted/locked in API levels lower than 21** and sometimes on later versions of the API on some devices when the user changes the device's security (screen lock protection). This phenomena is due to few issues in the `Keystore` implementation i.e [61989](https://code.google.com/p/android/issues/detail?id=61989), [177459](https://code.google.com/p/android/issues/detail?id=177459). Until those issues are fixed we need a way to recover from that scenario, otherwise the app itself might become unusable. To enable recovery you can add a `RecoveryHandler` to `SecuredPreferenceStore` before calling `getSharedInstance` for the first time. 
 
 ```java
@@ -76,7 +76,7 @@ SecuredPreferenceStore.setRecoveryHandler(new RecoveryHandler() {
 ```
 A default recovery handler called `DefaultRecoveryHandler` is included in the library which deletes the keys and data, giving the library a chance to start over. 
 
-##License
+## License
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
