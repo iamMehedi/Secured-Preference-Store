@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.security.KeyPairGeneratorSpec;
 import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 
@@ -102,6 +103,9 @@ public class EncryptionManager {
 
     private boolean isCompatMode = false;
 
+    private Context mContext;
+    SharedPreferences mPrefs;
+
     SecuredPreferenceStore.KeyStoreRecoveryNotifier mRecoveryHandler;
 
     public EncryptionManager(Context context, SharedPreferences prefStore, SecuredPreferenceStore.KeyStoreRecoveryNotifier recoveryHandler)
@@ -110,42 +114,114 @@ public class EncryptionManager {
         isCompatMode = prefStore.getBoolean(isCompatKey, Build.VERSION.SDK_INT < Build.VERSION_CODES.M);
         mRecoveryHandler = recoveryHandler;
 
-        boolean tryAgain = false;
+        mContext = context;
+        mPrefs = prefStore;
 
         loadKeyStore();
 
+        boolean tryAgain = false;
+
         try {
-            generateKey(context, prefStore);
-            loadKey(prefStore);
-        } catch (KeyStoreException e) {
-            tryAgain = tryRecovery(e);
-        }
-        catch(UnrecoverableEntryException e1){
-            tryAgain = tryRecovery(e1);
-        }
-        catch(InvalidKeyException e2){
-            tryAgain = tryRecovery(e2);
-        }
-        catch (IllegalStateException e3){
-            tryAgain = tryRecovery(e3);
-        }
-        catch (IOException e4){
-            if(e4.getCause() != null && e4.getCause() instanceof BadPaddingException) tryAgain = tryRecovery(e4);
-            else throw e4;
+            setup(context, prefStore);
+        } catch (Exception ex){
+            if(isRecoverableError(ex)) tryAgain = tryRecovery(ex);
+            else throw ex;
         }
 
         if(tryAgain){
-            generateKey(context, prefStore);
-            loadKey(prefStore);
+            setup(context, prefStore);
         }
     }
 
-    <T extends Exception> boolean tryRecovery(T e) throws T {
+    <T extends Exception> boolean isRecoverableError(T error){
+        return  (error instanceof KeyStoreException)
+                || (error instanceof UnrecoverableEntryException)
+                || (error instanceof KeyPermanentlyInvalidatedException)
+                || (error instanceof InvalidKeyException)
+                || (error instanceof IllegalStateException)
+                || (error instanceof IOException && (error.getCause() != null && error.getCause() instanceof BadPaddingException))
+                ;
+    }
+
+    void setup(Context context, SharedPreferences prefStore) throws NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException {
+        generateKey(context, prefStore);
+        loadKey(prefStore);
+    }
+
+    <T extends Exception> boolean tryRecovery(T e){
         return mRecoveryHandler != null && mRecoveryHandler.onRecoveryRequired(e, mStore, keyAliases());
     }
 
     List<String> keyAliases(){
         return Arrays.asList(AES_KEY_ALIAS, RSA_KEY_ALIAS);
+    }
+
+    /**
+     * Tries to recover once if a Keystore error occurs
+     * @param bytes
+     * @return
+     * @throws NoSuchPaddingException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchAlgorithmException
+     * @throws IOException
+     * @throws BadPaddingException
+     * @throws IllegalBlockSizeException
+     * @throws NoSuchProviderException
+     * @throws InvalidKeyException
+     */
+    public EncryptedData tryEncrypt(byte[] bytes) throws NoSuchPaddingException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, IOException, BadPaddingException, IllegalBlockSizeException, NoSuchProviderException, InvalidKeyException, KeyStoreException, UnrecoverableEntryException {
+        EncryptedData result = null;
+        boolean tryAgain = false;
+
+        try {
+            result = encrypt(bytes);
+        } catch (Exception ex){
+            if(isRecoverableError(ex)) tryAgain = tryRecovery(ex);
+            else throw ex;
+        }
+
+        if(tryAgain){
+            setup(mContext, mPrefs);
+            result = encrypt(bytes);
+        }
+
+        return result;
+    }
+
+    /**
+     * tries recovery once if a Keystore error occurs
+     * @param data
+     * @return
+     * @throws NoSuchPaddingException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchAlgorithmException
+     * @throws KeyStoreException
+     * @throws UnrecoverableEntryException
+     * @throws NoSuchProviderException
+     * @throws InvalidKeyException
+     * @throws IOException
+     * @throws BadPaddingException
+     * @throws IllegalBlockSizeException
+     * @throws InvalidMacException
+     */
+    public byte[] tryDecrypt(EncryptedData data) throws NoSuchPaddingException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, NoSuchProviderException, InvalidKeyException, IOException, BadPaddingException, IllegalBlockSizeException, InvalidMacException {
+        byte[]  result = null;
+
+        boolean tryAgain = false;
+
+        try{
+            result = decrypt(data);
+        }catch (Exception ex){
+            if(isRecoverableError(ex)) tryAgain = tryRecovery(ex);
+            else throw ex;
+        }
+
+        if(tryAgain){
+            setup(mContext, mPrefs);
+            result = decrypt(data);
+        }
+
+        return result;
     }
 
     /**
@@ -208,9 +284,9 @@ public class EncryptionManager {
      * @throws NoSuchProviderException
      * @throws BadPaddingException
      */
-    String encrypt(String text) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IOException, IllegalBlockSizeException, InvalidAlgorithmParameterException, NoSuchProviderException, BadPaddingException {
+    String encrypt(String text) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IOException, IllegalBlockSizeException, InvalidAlgorithmParameterException, NoSuchProviderException, BadPaddingException, KeyStoreException, UnrecoverableEntryException {
         if (text != null && text.length() > 0) {
-            EncryptedData encrypted = encrypt(text.getBytes(DEFAULT_CHARSET));
+            EncryptedData encrypted = tryEncrypt(text.getBytes(DEFAULT_CHARSET));
             return encodeEncryptedData(encrypted);
         }
 
@@ -230,10 +306,10 @@ public class EncryptionManager {
      * @throws NoSuchProviderException
      * @throws BadPaddingException
      */
-    String decrypt(String text) throws IOException, NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidMacException, NoSuchProviderException, InvalidAlgorithmParameterException {
+    String decrypt(String text) throws IOException, NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidMacException, NoSuchProviderException, InvalidAlgorithmParameterException, KeyStoreException, UnrecoverableEntryException {
         if (text != null && text.length() > 0) {
             EncryptedData encryptedData = decodeEncryptedText(text);
-            byte[] decrypted = decrypt(encryptedData);
+            byte[] decrypted = tryDecrypt(encryptedData);
 
             return new String(decrypted, 0, decrypted.length, DEFAULT_CHARSET);
         }
