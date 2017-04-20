@@ -82,23 +82,23 @@ public class SecuredPreferenceStore implements SharedPreferences {
     }
 
     @Override
-    public String getString(String s, String s1) {
+    public String getString(String key, String defValue) {
         try {
-            String key = EncryptionManager.getHashed(s);
-            String value = mPrefs.getString(key, null);
+            String hashedKey = EncryptionManager.getHashed(key);
+            String value = mPrefs.getString(hashedKey, null);
             if (value != null) return mEncryptionManager.decrypt(value);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        return s1;
+        return defValue;
     }
 
     @Override
-    public Set<String> getStringSet(String s, Set<String> set) {
+    public Set<String> getStringSet(String key, Set<String> defValues) {
         try {
-            String key = EncryptionManager.getHashed(s);
-            Set<String> eSet = mPrefs.getStringSet(key, null);
+            String hashedKey = EncryptionManager.getHashed(key);
+            Set<String> eSet = mPrefs.getStringSet(hashedKey, null);
 
             if (eSet != null) {
                 Set<String> dSet = new HashSet<>(eSet.size());
@@ -114,47 +114,47 @@ public class SecuredPreferenceStore implements SharedPreferences {
             e.printStackTrace();
         }
 
-        return set;
+        return defValues;
     }
 
     @Override
-    public int getInt(String s, int i) {
-        String value = getString(s, null);
+    public int getInt(String key, int defValue) {
+        String value = getString(key, null);
         if (value != null) {
             return Integer.parseInt(value);
         }
-        return i;
+        return defValue;
     }
 
     @Override
-    public long getLong(String s, long l) {
-        String value = getString(s, null);
+    public long getLong(String key, long defValue) {
+        String value = getString(key, null);
         if (value != null) {
             return Long.parseLong(value);
         }
-        return l;
+        return defValue;
     }
 
     @Override
-    public float getFloat(String s, float v) {
-        String value = getString(s, null);
+    public float getFloat(String key, float defValue) {
+        String value = getString(key, null);
         if (value != null) {
             return Float.parseFloat(value);
         }
-        return v;
+        return defValue;
     }
 
     @Override
-    public boolean getBoolean(String s, boolean b) {
-        String value = getString(s, null);
+    public boolean getBoolean(String key, boolean defValue) {
+        String value = getString(key, null);
         if (value != null) {
             return Boolean.parseBoolean(value);
         }
-        return b;
+        return defValue;
     }
 
-    public byte[] getBytes(String s) {
-        String val = getString(s, null);
+    public byte[] getBytes(String key) {
+        String val = getString(key, null);
         if (val != null) {
             return EncryptionManager.base64Decode(val);
         }
@@ -163,10 +163,10 @@ public class SecuredPreferenceStore implements SharedPreferences {
     }
 
     @Override
-    public boolean contains(String s) {
+    public boolean contains(String key) {
         try {
-            String key = EncryptionManager.getHashed(s);
-            return mPrefs.contains(key);
+            String hashedKey = EncryptionManager.getHashed(key);
+            return mPrefs.contains(hashedKey);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -199,11 +199,11 @@ public class SecuredPreferenceStore implements SharedPreferences {
         }
 
         @Override
-        public SharedPreferences.Editor putString(String s, String s1) {
+        public SharedPreferences.Editor putString(String key, String value) {
             try {
-                String key = EncryptionManager.getHashed(s);
-                String value = mEncryptionManager.encrypt(s1);
-                mEditor.putString(key, value);
+                String hashedKey = EncryptionManager.getHashed(key);
+                String evalue = mEncryptionManager.encrypt(value);
+                mEditor.putString(hashedKey, evalue);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -212,16 +212,16 @@ public class SecuredPreferenceStore implements SharedPreferences {
         }
 
         @Override
-        public SharedPreferences.Editor putStringSet(String s, Set<String> set) {
+        public SharedPreferences.Editor putStringSet(String key, Set<String> values) {
             try {
-                String key = EncryptionManager.getHashed(s);
-                Set<String> eSet = new HashSet<String>(set.size());
+                String hashedKey = EncryptionManager.getHashed(key);
+                Set<String> eSet = new HashSet<String>(values.size());
 
-                for (String val : set) {
+                for (String val : values) {
                     eSet.add(mEncryptionManager.encrypt(val));
                 }
 
-                mEditor.putStringSet(key, eSet);
+                mEditor.putStringSet(hashedKey, eSet);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -230,41 +230,41 @@ public class SecuredPreferenceStore implements SharedPreferences {
         }
 
         @Override
-        public SharedPreferences.Editor putInt(String s, int i) {
-            String val = Integer.toString(i);
-            return putString(s, val);
+        public SharedPreferences.Editor putInt(String key, int value) {
+            String val = Integer.toString(value);
+            return putString(key, val);
         }
 
         @Override
-        public SharedPreferences.Editor putLong(String s, long l) {
-            String val = Long.toString(l);
-            return putString(s, val);
+        public SharedPreferences.Editor putLong(String key, long value) {
+            String val = Long.toString(value);
+            return putString(key, val);
         }
 
         @Override
-        public SharedPreferences.Editor putFloat(String s, float v) {
-            String val = Float.toString(v);
-            return putString(s, val);
+        public SharedPreferences.Editor putFloat(String key, float value) {
+            String val = Float.toString(value);
+            return putString(key, val);
         }
 
         @Override
-        public SharedPreferences.Editor putBoolean(String s, boolean b) {
-            String val = Boolean.toString(b);
-            return putString(s, val);
+        public SharedPreferences.Editor putBoolean(String key, boolean value) {
+            String val = Boolean.toString(value);
+            return putString(key, val);
         }
 
-        public SharedPreferences.Editor putBytes(String s, byte[] bytes) {
+        public SharedPreferences.Editor putBytes(String key, byte[] bytes) {
             if (bytes != null) {
                 String val = EncryptionManager.base64Encode(bytes);
-                return putString(s, val);
-            } else return remove(s);
+                return putString(key, val);
+            } else return remove(key);
         }
 
         @Override
-        public SharedPreferences.Editor remove(String s) {
+        public SharedPreferences.Editor remove(String key) {
             try {
-                String key = EncryptionManager.getHashed(s);
-                mEditor.remove(key);
+                String hashedKey = EncryptionManager.getHashed(key);
+                mEditor.remove(hashedKey);
             } catch (Exception e) {
                 e.printStackTrace();
             }
