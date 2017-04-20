@@ -6,7 +6,6 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.security.KeyPairGeneratorSpec;
 import android.security.keystore.KeyGenParameterSpec;
-import android.security.keystore.KeyPermanentlyInvalidatedException;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 
@@ -136,7 +135,6 @@ public class EncryptionManager {
     <T extends Exception> boolean isRecoverableError(T error){
         return  (error instanceof KeyStoreException)
                 || (error instanceof UnrecoverableEntryException)
-                || (error instanceof KeyPermanentlyInvalidatedException)
                 || (error instanceof InvalidKeyException)
                 || (error instanceof IllegalStateException)
                 || (error instanceof IOException && (error.getCause() != null && error.getCause() instanceof BadPaddingException))
