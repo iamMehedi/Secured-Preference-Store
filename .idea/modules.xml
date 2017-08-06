@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Secured-Preference-Store.iml" filepath="$PROJECT_DIR$/.idea/modules/Secured-Preference-Store.iml" />
+      <module fileurl="file://$PROJECT_DIR$/Secured-Preference-Store.iml" filepath="$PROJECT_DIR$/Secured-Preference-Store.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/securedpreferencestore/securedpreferencestore.iml" filepath="$PROJECT_DIR$/securedpreferencestore/securedpreferencestore.iml" />
     </modules>
   </component>
 </project>

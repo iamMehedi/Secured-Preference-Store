@@ -35,29 +35,55 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     private static SecuredPreferenceStore mInstance;
 
-    private SecuredPreferenceStore(Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
+    private SecuredPreferenceStore(Context appContext) {
         Log.d("SECURE-PREFERENCE", "Creating store instance");
         mPrefs = appContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE);
-
-        mEncryptionManager = new EncryptionManager(appContext, mPrefs, new KeyStoreRecoveryNotifier() {
-            @Override
-            public boolean onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases) {
-                if(mRecoveryHandler != null) return mRecoveryHandler.recover(e, keyStore, keyAliases, mPrefs);
-                else throw new RuntimeException(e);
-            }
-        });
     }
 
     public static void setRecoveryHandler(RecoveryHandler recoveryHandler) {
         SecuredPreferenceStore.mRecoveryHandler = recoveryHandler;
     }
 
-    synchronized public static SecuredPreferenceStore getSharedInstance(Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchProviderException, KeyStoreException {
+    synchronized public static SecuredPreferenceStore getSharedInstance(Context appContext) {
         if (mInstance == null) {
             mInstance = new SecuredPreferenceStore(appContext);
         }
 
         return mInstance;
+    }
+
+    /**
+     * Must call this before using the store, otherwise the encryption manager will not be setup.
+     * This method allows getSharedInstance() to be called without having to handle the exceptions each time.
+     * Call this when first setting up the store in Application or your launching Activity and handle errors accordingly.
+     *
+     * @throws IOException
+     * @throws CertificateException
+     * @throws NoSuchAlgorithmException
+     * @throws KeyStoreException
+     * @throws UnrecoverableEntryException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     * @throws NoSuchProviderException
+     */
+    public void init( Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
+        if ( mEncryptionManager == null ) {
+            mEncryptionManager = new EncryptionManager(appContext, mPrefs, new KeyStoreRecoveryNotifier() {
+                @Override
+                public boolean onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases) {
+                    if (mRecoveryHandler != null)
+                        return mRecoveryHandler.recover(e, keyStore, keyAliases, mPrefs);
+                    else throw new RuntimeException(e);
+                }
+            });
+        } 
+    }
+
+    private void checkInitCalled() {
+        if ( mEncryptionManager == null ) {
+            throw new IllegalStateException("Must call init() before using the store");
+        }
     }
 
     public EncryptionManager getEncryptionManager() {
@@ -66,6 +92,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     @Override
     public Map<String, String> getAll() {
+        checkInitCalled();
+
         Map<String, ?> all = mPrefs.getAll();
         Map<String, String> dAll = new HashMap<>(all.size());
 
@@ -83,6 +111,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     @Override
     public String getString(String key, String defValue) {
+        checkInitCalled();
+
         try {
             String hashedKey = EncryptionManager.getHashed(key);
             String value = mPrefs.getString(hashedKey, null);
@@ -96,6 +126,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     @Override
     public Set<String> getStringSet(String key, Set<String> defValues) {
+        checkInitCalled();
+
         try {
             String hashedKey = EncryptionManager.getHashed(key);
             Set<String> eSet = mPrefs.getStringSet(hashedKey, null);
@@ -119,6 +151,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     @Override
     public int getInt(String key, int defValue) {
+        checkInitCalled();
+
         String value = getString(key, null);
         if (value != null) {
             return Integer.parseInt(value);
@@ -128,6 +162,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     @Override
     public long getLong(String key, long defValue) {
+        checkInitCalled();
+
         String value = getString(key, null);
         if (value != null) {
             return Long.parseLong(value);
@@ -137,6 +173,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     @Override
     public float getFloat(String key, float defValue) {
+        checkInitCalled();
+
         String value = getString(key, null);
         if (value != null) {
             return Float.parseFloat(value);
@@ -146,6 +184,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     @Override
     public boolean getBoolean(String key, boolean defValue) {
+        checkInitCalled();
+
         String value = getString(key, null);
         if (value != null) {
             return Boolean.parseBoolean(value);
@@ -154,6 +194,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
     }
 
     public byte[] getBytes(String key) {
+        checkInitCalled();
+
         String val = getString(key, null);
         if (val != null) {
             return EncryptionManager.base64Decode(val);
@@ -164,6 +206,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     @Override
     public boolean contains(String key) {
+        checkInitCalled();
+
         try {
             String hashedKey = EncryptionManager.getHashed(key);
             return mPrefs.contains(hashedKey);
@@ -200,6 +244,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
         @Override
         public SharedPreferences.Editor putString(String key, String value) {
+            checkInitCalled();
+
             try {
                 String hashedKey = EncryptionManager.getHashed(key);
                 String evalue = mEncryptionManager.encrypt(value);
@@ -213,6 +259,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
         @Override
         public SharedPreferences.Editor putStringSet(String key, Set<String> values) {
+            checkInitCalled();
+
             try {
                 String hashedKey = EncryptionManager.getHashed(key);
                 Set<String> eSet = new HashSet<String>(values.size());
@@ -231,29 +279,39 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
         @Override
         public SharedPreferences.Editor putInt(String key, int value) {
+            checkInitCalled();
+
             String val = Integer.toString(value);
             return putString(key, val);
         }
 
         @Override
         public SharedPreferences.Editor putLong(String key, long value) {
+            checkInitCalled();
+
             String val = Long.toString(value);
             return putString(key, val);
         }
 
         @Override
         public SharedPreferences.Editor putFloat(String key, float value) {
+            checkInitCalled();
+
             String val = Float.toString(value);
             return putString(key, val);
         }
 
         @Override
         public SharedPreferences.Editor putBoolean(String key, boolean value) {
+            checkInitCalled();
+
             String val = Boolean.toString(value);
             return putString(key, val);
         }
 
         public SharedPreferences.Editor putBytes(String key, byte[] bytes) {
+            checkInitCalled();
+
             if (bytes != null) {
                 String val = EncryptionManager.base64Encode(bytes);
                 return putString(key, val);
@@ -262,6 +320,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
         @Override
         public SharedPreferences.Editor remove(String key) {
+            checkInitCalled();
+
             try {
                 String hashedKey = EncryptionManager.getHashed(key);
                 mEditor.remove(hashedKey);
