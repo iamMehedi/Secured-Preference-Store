@@ -35,18 +35,27 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     private static SecuredPreferenceStore mInstance;
 
-    private SecuredPreferenceStore(Context appContext) {
+    private SecuredPreferenceStore(Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
         Log.d("SECURE-PREFERENCE", "Creating store instance");
         mPrefs = appContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE);
+
+        mEncryptionManager = new EncryptionManager(appContext, mPrefs, new KeyStoreRecoveryNotifier() {
+            @Override
+            public boolean onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases) {
+                if (mRecoveryHandler != null)
+                    return mRecoveryHandler.recover(e, keyStore, keyAliases, mPrefs);
+                else throw new RuntimeException(e);
+            }
+        });
     }
 
     public static void setRecoveryHandler(RecoveryHandler recoveryHandler) {
         SecuredPreferenceStore.mRecoveryHandler = recoveryHandler;
     }
 
-    synchronized public static SecuredPreferenceStore getSharedInstance(Context appContext) {
-        if (mInstance == null) {
-            mInstance = new SecuredPreferenceStore(appContext);
+    synchronized public static SecuredPreferenceStore getSharedInstance() {
+        if ( mInstance == null ) {
+            throw new IllegalStateException("Must call init() before using the store");
         }
 
         return mInstance;
@@ -67,17 +76,10 @@ public class SecuredPreferenceStore implements SharedPreferences {
      * @throws InvalidKeyException
      * @throws NoSuchProviderException
      */
-    public void init( Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
-        if ( mEncryptionManager == null ) {
-            mEncryptionManager = new EncryptionManager(appContext, mPrefs, new KeyStoreRecoveryNotifier() {
-                @Override
-                public boolean onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases) {
-                    if (mRecoveryHandler != null)
-                        return mRecoveryHandler.recover(e, keyStore, keyAliases, mPrefs);
-                    else throw new RuntimeException(e);
-                }
-            });
-        } 
+    public static void init( Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
+        if ( mInstance == null ) {
+            mInstance = new SecuredPreferenceStore(appContext);
+        }
     }
 
     private void checkInitCalled() {

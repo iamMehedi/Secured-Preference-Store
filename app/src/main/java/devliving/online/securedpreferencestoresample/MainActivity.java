@@ -37,10 +37,8 @@ public class MainActivity extends AppCompatActivity {
         reloadButton = (Button) findViewById(R.id.reload);
         saveButton = (Button) findViewById(R.id.save);
 
-        SecuredPreferenceStore store = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
-
         try {
-            store.init(getApplicationContext());
+            SecuredPreferenceStore.init(getApplicationContext());
 
             setupStore();
         } catch (Exception e) {
