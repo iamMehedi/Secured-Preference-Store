@@ -21,7 +21,9 @@ compile 'online.devliving:securedpreferencestore:latest_version'
 ```
 
 ## Usage
-You can use the secured preference store just like the way you use the default `SharedPrefences`
+Before you use the store it is imperative that you call `SecuredPreferenceStore.init(getApplicationContext());` before first use (perhaps in your `Application` or launch `Activity`) otherwise you will get an `IllegalStateException` thrown when trying to use the store.
+
+You can use the secured preference store just like the way you use the default `SharedPreferences`
 ```java
 SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
 
