@@ -21,7 +21,11 @@ compile 'online.devliving:securedpreferencestore:latest_version'
 ```
 
 ## Usage
-Before you use the store it is imperative that you call `SecuredPreferenceStore.init(getApplicationContext());` before first use (perhaps in your `Application` or launch `Activity`) otherwise you will get an `IllegalStateException` thrown when trying to use the store.
+Before using the store for the first time you must initialize it
+```
+SecuredPreferenceStore.init(getApplicationContext(), new DefaultRecoveryHandler());
+```
+perhaps in `onCreate` of your `Application`  class or launcher `Activity`. 
 
 You can use the secured preference store just like the way you use the default `SharedPreferences`
 ```java
@@ -92,4 +96,4 @@ A default recovery handler called `DefaultRecoveryHandler` is included in the li
 	See the License for the specific language governing permissions and
 	limitations under the License.
 
-	Copyright 2016 Mehedi Hasan Khan
+	Copyright 2017 Mehedi Hasan Khan

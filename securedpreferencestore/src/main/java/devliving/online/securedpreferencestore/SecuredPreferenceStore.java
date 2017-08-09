@@ -62,9 +62,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
     }
 
     /**
-     * Must call this before using the store, otherwise the encryption manager will not be setup.
-     * This method allows getSharedInstance() to be called without having to handle the exceptions each time.
-     * Call this when first setting up the store in Application or your launching Activity and handle errors accordingly.
+     * Must be called once before using the SecuredPreferenceStore to initialize the shared instance.
+     * You may call it in @code{onCreate} method of your application class or launcher activity
      *
      * @throws IOException
      * @throws CertificateException
@@ -78,10 +77,14 @@ public class SecuredPreferenceStore implements SharedPreferences {
      */
     public static void init( Context appContext,
                              RecoveryHandler recoveryHandler ) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
-        mRecoveryHandler = recoveryHandler;
-        if ( mInstance == null ) {
-            mInstance = new SecuredPreferenceStore(appContext);
+
+        if(mInstance != null){
+            Log.w("SECURED-PREFERENCE", "init called when there already is a non-null instance of the class");
+            return;
         }
+
+        setRecoveryHandler(recoveryHandler);
+        mInstance = new SecuredPreferenceStore(appContext);
     }
 
     public EncryptionManager getEncryptionManager() {

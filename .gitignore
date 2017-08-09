@@ -12,9 +12,6 @@
 .idea/markdown-navigator.xml
 .idea/modules.xml
 
-
-
-
 # Gradle:
 .idea/**/gradle.xml
 .idea/**/libraries
@@ -28,5 +25,3 @@ local.properties
 
 # Intellij
 *.iml
-
-

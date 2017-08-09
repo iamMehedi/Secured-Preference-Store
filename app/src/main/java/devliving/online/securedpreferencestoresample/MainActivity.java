@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
         saveButton = (Button) findViewById(R.id.save);
 
         try {
-            SecuredPreferenceStore.init(getApplicationContext());
+            SecuredPreferenceStore.init(getApplicationContext(), new DefaultRecoveryHandler());
 
             setupStore();
         } catch (Exception e) {
@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void reloadData()  {
-        SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
+        SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance();
 
         String textShort = prefStore.getString(TEXT_1, null);
         String textLong = prefStore.getString(TEXT_2, null);
@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void saveData() {
-        SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
+        SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance();
 
         prefStore.edit().putString(TEXT_1, text1.length() > 0 ? text1.getText().toString() : null).apply();
         prefStore.edit().putString(TEXT_2, text2.length() > 0 ? text2.getText().toString() : null).apply();
