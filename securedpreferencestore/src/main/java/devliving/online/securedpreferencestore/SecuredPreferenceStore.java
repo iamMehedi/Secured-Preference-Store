@@ -42,7 +42,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
         mEncryptionManager = new EncryptionManager(appContext, mPrefs, new KeyStoreRecoveryNotifier() {
             @Override
             public boolean onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases) {
-                if(mRecoveryHandler != null) return mRecoveryHandler.recover(e, keyStore, keyAliases, mPrefs);
+                if (mRecoveryHandler != null)
+                    return mRecoveryHandler.recover(e, keyStore, keyAliases, mPrefs);
                 else throw new RuntimeException(e);
             }
         });
@@ -52,12 +53,35 @@ public class SecuredPreferenceStore implements SharedPreferences {
         SecuredPreferenceStore.mRecoveryHandler = recoveryHandler;
     }
 
-    synchronized public static SecuredPreferenceStore getSharedInstance(Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchProviderException, KeyStoreException {
-        if (mInstance == null) {
-            mInstance = new SecuredPreferenceStore(appContext);
+    synchronized public static SecuredPreferenceStore getSharedInstance() {
+        if ( mInstance == null ) {
+            throw new IllegalStateException("Must call init() before using the store");
         }
 
         return mInstance;
+    }
+
+    /**
+     * Must call this before using the store, otherwise the encryption manager will not be setup.
+     * This method allows getSharedInstance() to be called without having to handle the exceptions each time.
+     * Call this when first setting up the store in Application or your launching Activity and handle errors accordingly.
+     *
+     * @throws IOException
+     * @throws CertificateException
+     * @throws NoSuchAlgorithmException
+     * @throws KeyStoreException
+     * @throws UnrecoverableEntryException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     * @throws NoSuchProviderException
+     */
+    public static void init( Context appContext,
+                             RecoveryHandler recoveryHandler ) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
+        mRecoveryHandler = recoveryHandler;
+        if ( mInstance == null ) {
+            mInstance = new SecuredPreferenceStore(appContext);
+        }
     }
 
     public EncryptionManager getEncryptionManager() {

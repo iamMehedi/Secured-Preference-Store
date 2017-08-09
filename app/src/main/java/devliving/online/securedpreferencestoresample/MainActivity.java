@@ -8,18 +8,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.UnrecoverableEntryException;
-import java.security.cert.CertificateException;
 import java.util.List;
-
-import javax.crypto.NoSuchPaddingException;
 
 import devliving.online.securedpreferencestore.DefaultRecoveryHandler;
 import devliving.online.securedpreferencestore.SecuredPreferenceStore;
@@ -47,19 +37,13 @@ public class MainActivity extends AppCompatActivity {
         reloadButton = (Button) findViewById(R.id.reload);
         saveButton = (Button) findViewById(R.id.save);
 
-        SecuredPreferenceStore.setRecoveryHandler(new DefaultRecoveryHandler(){
-            @Override
-            protected boolean recover(Exception e, KeyStore keyStore, List<String> keyAliases, SharedPreferences preferences) {
-                Toast.makeText(MainActivity.this, "Encryption key got invalidated, will try to start over.", Toast.LENGTH_SHORT).show();
-                return super.recover(e, keyStore, keyAliases, preferences);
-            }
-        });
-
         try {
-            reloadData();
+            SecuredPreferenceStore.init(getApplicationContext());
+
+            setupStore();
         } catch (Exception e) {
+            // Handle error.
             e.printStackTrace();
-            Toast.makeText(this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
         }
 
         reloadButton.setOnClickListener(new View.OnClickListener() {
@@ -87,7 +71,24 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    void reloadData() throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, KeyStoreException, NoSuchProviderException {
+    private void setupStore() {
+        SecuredPreferenceStore.setRecoveryHandler(new DefaultRecoveryHandler(){
+            @Override
+            protected boolean recover(Exception e, KeyStore keyStore, List<String> keyAliases, SharedPreferences preferences) {
+                Toast.makeText(MainActivity.this, "Encryption key got invalidated, will try to start over.", Toast.LENGTH_SHORT).show();
+                return super.recover(e, keyStore, keyAliases, preferences);
+            }
+        });
+
+        try {
+            reloadData();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    void reloadData()  {
         SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
 
         String textShort = prefStore.getString(TEXT_1, null);
@@ -103,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
         date1.setText(dateText);
     }
 
-    void saveData() throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, KeyStoreException, NoSuchProviderException {
+    void saveData() {
         SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
 
         prefStore.edit().putString(TEXT_1, text1.length() > 0 ? text1.getText().toString() : null).apply();
