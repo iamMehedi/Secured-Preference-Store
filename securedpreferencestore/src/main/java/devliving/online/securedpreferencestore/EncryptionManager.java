@@ -62,9 +62,15 @@ public class EncryptionManager {
     private final String SSL_PROVIDER = "AndroidOpenSSL";
     private final String BOUNCY_CASTLE_PROVIDER = "BC";
 
-    private final String RSA_KEY_ALIAS = "sps_rsa_key";
-    private final String AES_KEY_ALIAS = "sps_aes_key";
-    private final String MAC_KEY_ALIAS = "sps_mac_key";
+    private final String RSA_KEY_ALIAS;
+    private final String AES_KEY_ALIAS;
+    private final String MAC_KEY_ALIAS;
+
+    private final static String RSA_KEY_ALIAS_NAME = "rsa_key";
+    private final static String AES_KEY_ALIAS_NAME = "aes_key";
+    private final static String MAC_KEY_ALIAS_NAME = "mac_key";
+
+    private final static String DEFAULT_KEY_ALIAS_PREFIX = "sps";
 
     private final String DELIMITER = "]";
 
@@ -91,7 +97,8 @@ public class EncryptionManager {
             ENCRYPTION_PADDING_PKCS7;
     private final String MAC_CIPHER = MAC_ALGORITHM_HMAC_SHA256;
 
-    private final String IS_COMPAT_MODE_KEY_ALIAS = "sps_data_in_compat";
+    private final String IS_COMPAT_MODE_KEY_ALIAS;
+    private final static String IS_COMPAT_MODE_KEY_ALIAS_NAME = "data_in_compat";
 
     private KeyStore mStore;
     private SecretKey aesKey;
@@ -107,8 +114,15 @@ public class EncryptionManager {
 
     SecuredPreferenceStore.KeyStoreRecoveryNotifier mRecoveryHandler;
 
-    public EncryptionManager(Context context, SharedPreferences prefStore, SecuredPreferenceStore.KeyStoreRecoveryNotifier recoveryHandler)
+    public EncryptionManager(Context context, SharedPreferences prefStore, String keyAliasPrefix, SecuredPreferenceStore.KeyStoreRecoveryNotifier recoveryHandler)
             throws IOException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, NoSuchProviderException, NoSuchPaddingException, CertificateException, KeyStoreException, UnrecoverableEntryException, InvalidKeyException, IllegalStateException {
+
+        keyAliasPrefix = keyAliasPrefix != null ? keyAliasPrefix : DEFAULT_KEY_ALIAS_PREFIX;
+        IS_COMPAT_MODE_KEY_ALIAS = String.format("%s_%s", keyAliasPrefix, IS_COMPAT_MODE_KEY_ALIAS_NAME);
+        RSA_KEY_ALIAS = String.format("%s_%s", keyAliasPrefix, RSA_KEY_ALIAS_NAME);
+        AES_KEY_ALIAS = String.format("%s_%s", keyAliasPrefix, AES_KEY_ALIAS_NAME);
+        MAC_KEY_ALIAS = String.format("%s_%s", keyAliasPrefix, MAC_KEY_ALIAS_NAME);
+
         String isCompatKey = getHashed(IS_COMPAT_MODE_KEY_ALIAS);
         isCompatMode = prefStore.getBoolean(isCompatKey, Build.VERSION.SDK_INT < Build.VERSION_CODES.M);
         mRecoveryHandler = recoveryHandler;
