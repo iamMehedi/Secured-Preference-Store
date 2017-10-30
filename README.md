@@ -27,6 +27,12 @@ SecuredPreferenceStore.init(getApplicationContext(), new DefaultRecoveryHandler(
 ```
 perhaps in `onCreate` of your `Application`  class or launcher `Activity`. 
 
+It is also possible to hide the use of Secure Preference Store, by specifying custom file names and key prefixes
+```
+SecuredPreferenceStore.init(getApplicationContext(), "myPreferenceFileName", "my_prefix", new DefaultRecoveryHandler());
+```
+This is best used with obfuscation tools that support string encryption.
+
 You can use the secured preference store just like the way you use the default `SharedPreferences`
 ```java
 SecuredPreferenceStore prefStore = SecuredPreferenceStore.getSharedInstance(getApplicationContext());
