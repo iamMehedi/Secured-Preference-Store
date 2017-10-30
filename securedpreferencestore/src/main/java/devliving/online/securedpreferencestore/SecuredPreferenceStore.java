@@ -2,7 +2,6 @@ package devliving.online.securedpreferencestore;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.util.Log;
 
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -36,7 +35,6 @@ public class SecuredPreferenceStore implements SharedPreferences {
     private static SecuredPreferenceStore mInstance;
 
     private SecuredPreferenceStore(Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
-        Log.d("SECURE-PREFERENCE", "Creating store instance");
         mPrefs = appContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE);
 
         mEncryptionManager = new EncryptionManager(appContext, mPrefs, new KeyStoreRecoveryNotifier() {
@@ -79,7 +77,6 @@ public class SecuredPreferenceStore implements SharedPreferences {
                              RecoveryHandler recoveryHandler ) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
 
         if(mInstance != null){
-            Log.w("SECURED-PREFERENCE", "init called when there already is a non-null instance of the class");
             return;
         }
 
