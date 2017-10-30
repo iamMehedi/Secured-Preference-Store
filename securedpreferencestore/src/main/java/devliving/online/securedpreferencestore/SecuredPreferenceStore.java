@@ -25,7 +25,7 @@ import javax.crypto.NoSuchPaddingException;
  */
 public class SecuredPreferenceStore implements SharedPreferences {
 
-    private final String PREF_FILE_NAME = "SPS_file";
+    private final static String DEFAULT_PREF_FILE_NAME = "SPS_file";
 
     private SharedPreferences mPrefs;
     private EncryptionManager mEncryptionManager;
@@ -34,8 +34,8 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     private static SecuredPreferenceStore mInstance;
 
-    private SecuredPreferenceStore(Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
-        mPrefs = appContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE);
+    private SecuredPreferenceStore(Context appContext, String fileName) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
+        mPrefs = appContext.getSharedPreferences(fileName, Context.MODE_PRIVATE);
 
         mEncryptionManager = new EncryptionManager(appContext, mPrefs, new KeyStoreRecoveryNotifier() {
             @Override
@@ -73,7 +73,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
      * @throws InvalidKeyException
      * @throws NoSuchProviderException
      */
-    public static void init( Context appContext,
+    public static void init( Context appContext, String fileName,
                              RecoveryHandler recoveryHandler ) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
 
         if(mInstance != null){
@@ -81,7 +81,14 @@ public class SecuredPreferenceStore implements SharedPreferences {
         }
 
         setRecoveryHandler(recoveryHandler);
-        mInstance = new SecuredPreferenceStore(appContext);
+        mInstance = new SecuredPreferenceStore(appContext, fileName);
+    }
+
+    /**
+     * @see #init(Context, String, RecoveryHandler)
+     */
+    public static void init( Context appContext, RecoveryHandler recoveryHandler) throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchProviderException, KeyStoreException {
+        init(appContext, DEFAULT_PREF_FILE_NAME, recoveryHandler);
     }
 
     public EncryptionManager getEncryptionManager() {
