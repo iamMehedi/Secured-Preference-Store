@@ -491,8 +491,8 @@ public class EncryptionManager {
                     .setCertificateSubject(new X500Principal("CN = Secured Preference Store, O = Devliving Online"))
                     .setCertificateSerialNumber(BigInteger.ONE)
                     .setKeySize(AES_BIT_LENGTH)
-                    .setKeyValidityEnd(end.getTime())
                     .setKeyValidityStart(start.getTime())
+                    .setKeyValidityEnd(end.getTime())
                     .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .setRandomizedEncryptionRequired(false) //TODO: set to true and let the Cipher generate a secured IV
@@ -596,16 +596,16 @@ public class EncryptionManager {
                         .setAlias(RSA_KEY_ALIAS)
                         .setKeySize(RSA_BIT_LENGTH)
                         .setKeyType(KEY_ALGORITHM_RSA)
-                        .setEndDate(end.getTime())
                         .setStartDate(start.getTime())
+                        .setEndDate(end.getTime())
                         .setSerialNumber(BigInteger.ONE)
                         .setSubject(new X500Principal("CN = Secured Preference Store, O = Devliving Online"))
                         .build();
             } else {
                 spec = new KeyPairGeneratorSpec.Builder(context)
                         .setAlias(RSA_KEY_ALIAS)
-                        .setEndDate(end.getTime())
                         .setStartDate(start.getTime())
+                        .setEndDate(end.getTime())
                         .setSerialNumber(BigInteger.ONE)
                         .setSubject(new X500Principal("CN = Secured Preference Store, O = Devliving Online"))
                         .build();
