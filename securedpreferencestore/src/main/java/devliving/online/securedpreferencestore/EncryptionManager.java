@@ -480,10 +480,6 @@ public class EncryptionManager {
 
     @TargetApi(Build.VERSION_CODES.M)
     boolean generateAESKey() throws KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
-        Calendar start = Calendar.getInstance();
-        Calendar end = Calendar.getInstance();
-        end.add(Calendar.YEAR, 25);
-
         if (!mStore.containsAlias(AES_KEY_ALIAS)) {
             KeyGenerator keyGen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER);
 
@@ -491,8 +487,6 @@ public class EncryptionManager {
                     .setCertificateSubject(new X500Principal("CN = Secured Preference Store, O = Devliving Online"))
                     .setCertificateSerialNumber(BigInteger.ONE)
                     .setKeySize(AES_BIT_LENGTH)
-                    .setKeyValidityStart(start.getTime())
-                    .setKeyValidityEnd(end.getTime())
                     .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .setRandomizedEncryptionRequired(false) //TODO: set to true and let the Cipher generate a secured IV
