@@ -38,7 +38,8 @@ public class MainActivity extends AppCompatActivity {
         saveButton = (Button) findViewById(R.id.save);
 
         try {
-            SecuredPreferenceStore.init(getApplicationContext(), new DefaultRecoveryHandler());
+            byte[] seed = "SecuredSeedData".getBytes();
+            SecuredPreferenceStore.init(getApplicationContext(), seed, new DefaultRecoveryHandler());
 
             setupStore();
         } catch (Exception e) {
