@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -35,11 +37,11 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     private static SecuredPreferenceStore mInstance;
 
-    private SecuredPreferenceStore(Context appContext) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
+    private SecuredPreferenceStore(Context appContext, @Nullable byte[] seed) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
         Log.d("SECURE-PREFERENCE", "Creating store instance");
         mPrefs = appContext.getSharedPreferences(PREF_FILE_NAME, Context.MODE_PRIVATE);
 
-        mEncryptionManager = new EncryptionManager(appContext, mPrefs, new KeyStoreRecoveryNotifier() {
+        mEncryptionManager = new EncryptionManager(appContext, seed, mPrefs, new KeyStoreRecoveryNotifier() {
             @Override
             public boolean onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases) {
                 if (mRecoveryHandler != null)
@@ -65,6 +67,38 @@ public class SecuredPreferenceStore implements SharedPreferences {
      * Must be called once before using the SecuredPreferenceStore to initialize the shared instance.
      * You may call it in @code{onCreate} method of your application class or launcher activity
      *
+     * @param appContext
+     * @param seed Seed to use while generating keys
+     * @param recoveryHandler
+     *
+     * @throws IOException
+     * @throws CertificateException
+     * @throws NoSuchAlgorithmException
+     * @throws KeyStoreException
+     * @throws UnrecoverableEntryException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     * @throws NoSuchProviderException
+     */
+    public static void init( Context appContext, @Nullable byte[] seed,
+                             RecoveryHandler recoveryHandler ) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
+
+        if(mInstance != null){
+            Log.w("SECURED-PREFERENCE", "init called when there already is a non-null instance of the class");
+            return;
+        }
+
+        setRecoveryHandler(recoveryHandler);
+        mInstance = new SecuredPreferenceStore(appContext, seed);
+    }
+
+    /**
+     * Must be called once before using the SecuredPreferenceStore to initialize the shared instance.
+     * You may call it in @code{onCreate} method of your application class or launcher activity
+     *
+     * @param appContext
+     * @param recoveryHandler
      * @throws IOException
      * @throws CertificateException
      * @throws NoSuchAlgorithmException
@@ -77,14 +111,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
      */
     public static void init( Context appContext,
                              RecoveryHandler recoveryHandler ) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
-
-        if(mInstance != null){
-            Log.w("SECURED-PREFERENCE", "init called when there already is a non-null instance of the class");
-            return;
-        }
-
-        setRecoveryHandler(recoveryHandler);
-        mInstance = new SecuredPreferenceStore(appContext);
+        init(appContext, null, recoveryHandler);
     }
 
     public EncryptionManager getEncryptionManager() {
