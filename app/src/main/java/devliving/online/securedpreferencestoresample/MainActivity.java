@@ -3,6 +3,7 @@ package devliving.online.securedpreferencestoresample;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -12,6 +13,7 @@ import java.security.KeyStore;
 import java.util.List;
 
 import devliving.online.securedpreferencestore.DefaultRecoveryHandler;
+import devliving.online.securedpreferencestore.MigrateFrom050to060;
 import devliving.online.securedpreferencestore.SecuredPreferenceStore;
 
 public class MainActivity extends AppCompatActivity {
@@ -38,12 +40,20 @@ public class MainActivity extends AppCompatActivity {
         saveButton = (Button) findViewById(R.id.save);
 
         try {
-            SecuredPreferenceStore.init(getApplicationContext(), new DefaultRecoveryHandler());
+            String bitShifter = "aaowefoiajw4f0javn290nap09jefaoij"; //Should be uniquely random for you specific app.
+            SecuredPreferenceStore.migrate(getApplicationContext(), "SPS_file", new MigrateFrom050to060("AnotherFileName", bitShifter));
+            SecuredPreferenceStore.init(getApplicationContext(), "AnotherFileName", "myPrefix", bitShifter, new DefaultRecoveryHandler());
 
             setupStore();
         } catch (Exception e) {
             // Handle error.
-            e.printStackTrace();
+            Log.e("SECURED-PREFERENCE", e.getMessage(), e);
+            try {
+                SecuredPreferenceStore.init(getApplicationContext(), new DefaultRecoveryHandler());
+                setupStore();
+            } catch (Exception ex) {
+                Log.e("SECURED-PREFERENCE", "Unable to initialize backup", ex);
+            }
         }
 
         reloadButton.setOnClickListener(new View.OnClickListener() {
@@ -52,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     reloadData();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.e("SECURED-PREFERENCE", "", e);
                     Toast.makeText(MainActivity.this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -64,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     saveData();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.e("SECURED-PREFERENCE", "", e);
                     Toast.makeText(MainActivity.this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -81,9 +91,10 @@ public class MainActivity extends AppCompatActivity {
         });
 
         try {
+//            SecuredPreferenceStore.getSharedInstance().migrateToNewestVersion(getApplicationContext());
             reloadData();
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("SECURED-PREFERENCE", "", e);
             Toast.makeText(this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
         }
     }

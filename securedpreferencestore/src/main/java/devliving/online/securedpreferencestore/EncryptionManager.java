@@ -9,6 +9,8 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -32,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Map;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -46,6 +49,8 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.x500.X500Principal;
+
+import devliving.online.securedpreferencestore.SecuredPreferenceStore.KeyStoreRecoveryNotifier;
 
 /**
  * Created by Mehedi on 8/21/16.
@@ -62,6 +67,9 @@ public class EncryptionManager {
     private final String SSL_PROVIDER = "AndroidOpenSSL";
     private final String BOUNCY_CASTLE_PROVIDER = "BC";
 
+    private final String SHIFTING_KEY;
+    private final static String DEFAULT_SHIFTING_KEY = "";
+
     private final String RSA_KEY_ALIAS;
     private final String AES_KEY_ALIAS;
     private final String MAC_KEY_ALIAS;
@@ -70,6 +78,7 @@ public class EncryptionManager {
     private final static String AES_KEY_ALIAS_NAME = "aes_key";
     private final static String MAC_KEY_ALIAS_NAME = "mac_key";
 
+    private static final String OVERRIDING_KEY_ALIAS_PREFIX_NAME = "OverridingAlias";
     private final static String DEFAULT_KEY_ALIAS_PREFIX = "sps";
 
     private final String DELIMITER = "]";
@@ -107,21 +116,53 @@ public class EncryptionManager {
     private RSAPublicKey publicKey;
     private RSAPrivateKey privateKey;
 
+    private String mKeyAliasPrefix;
+
     private boolean isCompatMode = false;
 
     private Context mContext;
     SharedPreferences mPrefs;
 
-    SecuredPreferenceStore.KeyStoreRecoveryNotifier mRecoveryHandler;
+    KeyStoreRecoveryNotifier mRecoveryHandler;
 
-    public EncryptionManager(Context context, SharedPreferences prefStore, String keyAliasPrefix, SecuredPreferenceStore.KeyStoreRecoveryNotifier recoveryHandler)
-            throws IOException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, NoSuchProviderException, NoSuchPaddingException, CertificateException, KeyStoreException, UnrecoverableEntryException, InvalidKeyException, IllegalStateException {
+    /**
+     * @deprecated This does not provided the heightened security, that is possible with version 0.6.0.
+     * Please use the full constructor and fill in every parameters
+     * @param context
+     * @param prefStore
+     * @param recoveryNotifier
+     * @throws IOException
+     * @throws CertificateException
+     * @throws NoSuchAlgorithmException
+     * @throws KeyStoreException
+     * @throws UnrecoverableEntryException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     * @throws NoSuchProviderException
+     */
+    public EncryptionManager(Context context, SharedPreferences prefStore, KeyStoreRecoveryNotifier recoveryNotifier)
+            throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException,
+            UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException,
+            InvalidKeyException, NoSuchProviderException {
 
-        keyAliasPrefix = keyAliasPrefix != null ? keyAliasPrefix : DEFAULT_KEY_ALIAS_PREFIX;
-        IS_COMPAT_MODE_KEY_ALIAS = String.format("%s_%s", keyAliasPrefix, IS_COMPAT_MODE_KEY_ALIAS_NAME);
-        RSA_KEY_ALIAS = String.format("%s_%s", keyAliasPrefix, RSA_KEY_ALIAS_NAME);
-        AES_KEY_ALIAS = String.format("%s_%s", keyAliasPrefix, AES_KEY_ALIAS_NAME);
-        MAC_KEY_ALIAS = String.format("%s_%s", keyAliasPrefix, MAC_KEY_ALIAS_NAME);
+        this(context, prefStore, null, null, recoveryNotifier);
+    }
+
+    public EncryptionManager(Context context, SharedPreferences prefStore, @Nullable String keyAliasPrefix,
+                             @Nullable String fallbackShiftingKey, KeyStoreRecoveryNotifier recoveryHandler)
+            throws IOException, NoSuchAlgorithmException, InvalidAlgorithmParameterException,
+            NoSuchProviderException, NoSuchPaddingException, CertificateException, KeyStoreException,
+            UnrecoverableEntryException, InvalidKeyException, IllegalStateException {
+
+        SHIFTING_KEY = fallbackShiftingKey != null ? fallbackShiftingKey : DEFAULT_SHIFTING_KEY;
+
+        keyAliasPrefix = prefStore.getString(getHashed(OVERRIDING_KEY_ALIAS_PREFIX_NAME), keyAliasPrefix);
+        mKeyAliasPrefix = keyAliasPrefix != null ? keyAliasPrefix : DEFAULT_KEY_ALIAS_PREFIX;
+        IS_COMPAT_MODE_KEY_ALIAS = String.format("%s_%s", mKeyAliasPrefix, IS_COMPAT_MODE_KEY_ALIAS_NAME);
+        RSA_KEY_ALIAS = String.format("%s_%s", mKeyAliasPrefix, RSA_KEY_ALIAS_NAME);
+        AES_KEY_ALIAS = String.format("%s_%s", mKeyAliasPrefix, AES_KEY_ALIAS_NAME);
+        MAC_KEY_ALIAS = String.format("%s_%s", mKeyAliasPrefix, MAC_KEY_ALIAS_NAME);
 
         String isCompatKey = getHashed(IS_COMPAT_MODE_KEY_ALIAS);
         isCompatMode = prefStore.getBoolean(isCompatKey, Build.VERSION.SDK_INT < Build.VERSION_CODES.M);
@@ -530,7 +571,8 @@ public class EncryptionManager {
             keyGen.init(AES_BIT_LENGTH);
             SecretKey sKey = keyGen.generateKey();
 
-            byte[] encryptedData = RSAEncrypt(sKey.getEncoded());
+            byte[] shiftedEncodedKey = xorWithKey(sKey.getEncoded(), SHIFTING_KEY.getBytes());
+            byte[] encryptedData = RSAEncrypt(shiftedEncodedKey);
 
             String AESKey = base64Encode(encryptedData);
             boolean result = prefStore.edit().putString(key, AESKey).commit();
@@ -542,9 +584,20 @@ public class EncryptionManager {
         return false;
     }
 
+    private byte[] xorWithKey(byte[] a, byte[] key) {
+        if(key == null || key.length == 0) return a;
+
+        byte[] out = new byte[a.length];
+        for (int i = 0; i < a.length; i++) {
+            out[i] = (byte) (a[i] ^ key[i%key.length]);
+        }
+        return out;
+    }
+
     boolean generateMacKey(SharedPreferences prefStore) throws NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException, UnrecoverableEntryException, IOException {
         String key = getHashed(MAC_KEY_ALIAS);
 
+        Map<String, ?> all = prefStore.getAll();
         if (!prefStore.contains(key)) {
             byte[] randomBytes = new byte[MAC_BIT_LENGTH / 8];
             SecureRandom rng = new SecureRandom();
@@ -564,7 +617,8 @@ public class EncryptionManager {
         String base64Value = prefStore.getString(key, null);
         if (base64Value != null) {
             byte[] encryptedData = base64Decode(base64Value);
-            byte[] keyData = RSADecrypt(encryptedData);
+            byte[] shiftedEncodedKey = RSADecrypt(encryptedData);
+            byte[] keyData = xorWithKey(shiftedEncodedKey, SHIFTING_KEY.getBytes());
 
             return new SecretKeySpec(keyData, "AES");
         }
@@ -684,6 +738,10 @@ public class EncryptionManager {
 
         cipherInputStream.close();
         return dbytes;
+    }
+
+    public void makePermanentKeyAlias() throws UnsupportedEncodingException, NoSuchAlgorithmException {
+        mPrefs.edit().putString(getHashed(OVERRIDING_KEY_ALIAS_PREFIX_NAME), mKeyAliasPrefix).commit();
     }
 
     public static class EncryptedData {

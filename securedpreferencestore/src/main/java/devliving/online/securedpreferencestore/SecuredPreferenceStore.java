@@ -24,20 +24,23 @@ import javax.crypto.NoSuchPaddingException;
  * Created by Mehedi on 8/21/16.
  */
 public class SecuredPreferenceStore implements SharedPreferences {
-
+    private final static int VERSION = 600;
+    final static String VERSION_KEY = "VERSION";
     private final static String DEFAULT_PREF_FILE_NAME = "SPS_file";
 
     private SharedPreferences mPrefs;
     private EncryptionManager mEncryptionManager;
+    private int mRunningVersion;
 
     private static RecoveryHandler mRecoveryHandler;
 
     private static SecuredPreferenceStore mInstance;
 
-    private SecuredPreferenceStore(Context appContext, String fileName, String keyPrefix) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
-        mPrefs = appContext.getSharedPreferences(fileName, Context.MODE_PRIVATE);
+    private SecuredPreferenceStore(Context appContext, String storeName, String keyPrefix, String fallbackShiftingKey) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
+        Logger.d("Creating store instance");
+        mPrefs = appContext.getSharedPreferences(storeName, Context.MODE_PRIVATE);
 
-        mEncryptionManager = new EncryptionManager(appContext, mPrefs, keyPrefix, new KeyStoreRecoveryNotifier() {
+        mEncryptionManager = new EncryptionManager(appContext, mPrefs, keyPrefix, fallbackShiftingKey, new KeyStoreRecoveryNotifier() {
             @Override
             public boolean onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases) {
                 if (mRecoveryHandler != null)
@@ -45,6 +48,15 @@ public class SecuredPreferenceStore implements SharedPreferences {
                 else throw new RuntimeException(e);
             }
         });
+
+
+        if(!mPrefs.contains(VERSION_KEY) && mPrefs.getAll().size() != 0) {
+            mPrefs.edit().putInt(VERSION_KEY, 500).apply();
+        } else if(!mPrefs.contains(VERSION_KEY)) {
+            mPrefs.edit().putInt(VERSION_KEY, VERSION).apply();
+            return;
+        }
+        mRunningVersion = mPrefs.getInt(VERSION_KEY, 500);
     }
 
     public static void setRecoveryHandler(RecoveryHandler recoveryHandler) {
@@ -73,46 +85,66 @@ public class SecuredPreferenceStore implements SharedPreferences {
      * @throws InvalidKeyException
      * @throws NoSuchProviderException
      */
-    public static void init( Context appContext, String fileName, String keyPrefix,
+    public static void init( Context appContext, String storeName, String keyPrefix, String fallbackShiftingKey,
                              RecoveryHandler recoveryHandler ) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException {
 
         if(mInstance != null){
+            Logger.w("init called when there already is a non-null instance of the class");
             return;
         }
 
         setRecoveryHandler(recoveryHandler);
-        mInstance = new SecuredPreferenceStore(appContext, fileName, keyPrefix);
+        mInstance = new SecuredPreferenceStore(appContext, storeName, keyPrefix, fallbackShiftingKey);
     }
 
     /**
-     * @see #init(Context, String, RecoveryHandler)
+     * @see #init(Context, String, String, String, RecoveryHandler)
      */
-    public static void init( Context appContext, String fileName, RecoveryHandler recoveryHandler) throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchProviderException, KeyStoreException {
-        init(appContext, fileName, null, recoveryHandler);
+    public static void init( Context appContext, String storeName, String keyPrefix, RecoveryHandler recoveryHandler) throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchProviderException, KeyStoreException {
+        init(appContext, storeName, keyPrefix, null, recoveryHandler);
     }
 
     /**
-     * @see #init(Context, String, RecoveryHandler)
+     * @see #init(Context, String, String, String, RecoveryHandler)
+     */
+    public static void init( Context appContext, String storeName, RecoveryHandler recoveryHandler) throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchProviderException, KeyStoreException {
+        init(appContext, storeName, null, recoveryHandler);
+    }
+
+    /**
+     * @see #init(Context, String, String, String, RecoveryHandler)
+     * @deprecated This contructor does not provide the shifted encryption on older Android versions,
+     * and has thus been deprecated. It is there for people who do not want to change their storage method
      */
     public static void init( Context appContext, RecoveryHandler recoveryHandler) throws IOException, CertificateException, NoSuchAlgorithmException, InvalidKeyException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchProviderException, KeyStoreException {
-        init(appContext, DEFAULT_PREF_FILE_NAME, recoveryHandler);
+        init(appContext, DEFAULT_PREF_FILE_NAME, null, "", recoveryHandler);
     }
 
     public EncryptionManager getEncryptionManager() {
         return mEncryptionManager;
     }
 
+    public static void migrate(Context appContext, String storeName, MigrationHandler migrationHandler) throws MigrationHandler.MigrationFailedException {
+        SharedPreferences mPrefs = appContext.getSharedPreferences(storeName, Context.MODE_PRIVATE);
+        migrationHandler.migrate(appContext, mPrefs);
+    }
+
     @Override
-    public Map<String, String> getAll() {
+    public Map<String, Object> getAll() {
         Map<String, ?> all = mPrefs.getAll();
-        Map<String, String> dAll = new HashMap<>(all.size());
+        Map<String, Object> dAll = new HashMap<>(all.size());
 
         if (all.size() > 0) {
             for (String key : all.keySet()) {
+                if(key.equals(VERSION_KEY)) continue;
                 try {
-                    dAll.put(key, mEncryptionManager.decrypt((String) all.get(key)));
+                    Object value = all.get(key);
+                    if(value.getClass().equals(String.class) && ((String)value).contains("]"))
+                        dAll.put(key, mEncryptionManager.decrypt((String) value));
+                    else
+                        dAll.put(key, value);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Logger.e(e);
                 }
             }
         }
@@ -126,7 +158,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
             String value = mPrefs.getString(hashedKey, null);
             if (value != null) return mEncryptionManager.decrypt(value);
         } catch (Exception e) {
-            e.printStackTrace();
+            Logger.e(e);
         }
 
         return defValue;
@@ -149,7 +181,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            Logger.e(e);
         }
 
         return defValues;
@@ -206,7 +238,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
             String hashedKey = EncryptionManager.getHashed(key);
             return mPrefs.contains(hashedKey);
         } catch (Exception e) {
-            e.printStackTrace();
+            Logger.e(e);
         }
 
         return false;
@@ -243,7 +275,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
                 String evalue = mEncryptionManager.encrypt(value);
                 mEditor.putString(hashedKey, evalue);
             } catch (Exception e) {
-                e.printStackTrace();
+                Logger.e(e);
             }
 
             return this;
@@ -261,7 +293,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
                 mEditor.putStringSet(hashedKey, eSet);
             } catch (Exception e) {
-                e.printStackTrace();
+                Logger.e(e);
             }
 
             return this;
@@ -304,7 +336,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
                 String hashedKey = EncryptionManager.getHashed(key);
                 mEditor.remove(hashedKey);
             } catch (Exception e) {
-                e.printStackTrace();
+                Logger.e(e);
             }
 
             return this;
