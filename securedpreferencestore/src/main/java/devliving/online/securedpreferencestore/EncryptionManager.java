@@ -32,9 +32,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.List;
-import java.util.Map;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -176,14 +174,14 @@ public class EncryptionManager {
         boolean tryAgain = false;
 
         try {
-            setup(context, prefStore);
+            setup(context, prefStore, seed);
         } catch (Exception ex){
             if(isRecoverableError(ex)) tryAgain = tryRecovery(ex);
             else throw ex;
         }
 
         if(tryAgain){
-            setup(context, prefStore);
+            setup(context, prefStore, seed);
         }
     }
 
@@ -196,8 +194,8 @@ public class EncryptionManager {
                 ;
     }
 
-    void setup(Context context, SharedPreferences prefStore) throws NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException {
-        generateKey(context, prefStore);
+    void setup(Context context, SharedPreferences prefStore, @Nullable byte[] seed) throws NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, NoSuchProviderException, InvalidAlgorithmParameterException, IOException {
+        generateKey(context, seed, prefStore);
         loadKey(prefStore);
     }
 
@@ -234,7 +232,7 @@ public class EncryptionManager {
         }
 
         if(tryAgain){
-            setup(mContext, mPrefs);
+            setup(mContext, mPrefs, null);
             result = encrypt(bytes);
         }
 
@@ -270,7 +268,7 @@ public class EncryptionManager {
         }
 
         if(tryAgain){
-            setup(mContext, mPrefs);
+            setup(mContext, mPrefs, null);
             result = decrypt(data);
         }
 
@@ -522,23 +520,19 @@ public class EncryptionManager {
         }
     }
 
-    void generateKey(Context context, SharedPreferences prefStore) throws KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnrecoverableEntryException, NoSuchPaddingException, InvalidKeyException, IOException {
+    void generateKey(Context context, @Nullable byte[] seed, SharedPreferences prefStore) throws KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, UnrecoverableEntryException, NoSuchPaddingException, InvalidKeyException, IOException {
         if (!isCompatMode) {
-            generateAESKey();
+            generateAESKey(seed);
         } else {
-            generateRSAKeys(context);
+            generateRSAKeys(context, seed);
             loadRSAKeys();
-            generateFallbackAESKey(prefStore);
-            generateMacKey(prefStore);
+            generateFallbackAESKey(prefStore, seed);
+            generateMacKey(prefStore, seed);
         }
     }
 
     @TargetApi(Build.VERSION_CODES.M)
-    boolean generateAESKey() throws KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
-        Calendar start = Calendar.getInstance();
-        Calendar end = Calendar.getInstance();
-        end.add(Calendar.YEAR, 25);
-
+    boolean generateAESKey(@Nullable byte[] seed) throws KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
         if (!mStore.containsAlias(AES_KEY_ALIAS)) {
             KeyGenerator keyGen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER);
 
@@ -546,13 +540,16 @@ public class EncryptionManager {
                     .setCertificateSubject(new X500Principal("CN = Secured Preference Store, O = Devliving Online"))
                     .setCertificateSerialNumber(BigInteger.ONE)
                     .setKeySize(AES_BIT_LENGTH)
-                    .setKeyValidityEnd(end.getTime())
-                    .setKeyValidityStart(start.getTime())
                     .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                     .setRandomizedEncryptionRequired(false) //TODO: set to true and let the Cipher generate a secured IV
                     .build();
-            keyGen.init(spec);
+            if(seed != null && seed.length > 0){
+                SecureRandom random = new SecureRandom(seed);
+                keyGen.init(spec, random);
+            } else {
+                keyGen.init(spec);
+            }
 
             keyGen.generateKey();
 
@@ -562,13 +559,19 @@ public class EncryptionManager {
         return false;
     }
 
-    boolean generateFallbackAESKey(SharedPreferences prefStore) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, KeyStoreException, NoSuchProviderException, UnrecoverableEntryException {
+    boolean generateFallbackAESKey(SharedPreferences prefStore, @Nullable byte[] seed) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, KeyStoreException, NoSuchProviderException, UnrecoverableEntryException {
         String key = getHashed(AES_KEY_ALIAS);
 
         if (!prefStore.contains(key)) {
             KeyGenerator keyGen = KeyGenerator.getInstance(KEY_ALGORITHM_AES);
 
-            keyGen.init(AES_BIT_LENGTH);
+            if(seed != null && seed.length > 0){
+                SecureRandom random = new SecureRandom(seed);
+                keyGen.init(AES_BIT_LENGTH, random);
+            } else {
+                keyGen.init(AES_BIT_LENGTH);
+            }
+
             SecretKey sKey = keyGen.generateKey();
 
             byte[] shiftedEncodedKey = xorWithKey(sKey.getEncoded(), SHIFTING_KEY.getBytes());
@@ -584,23 +587,18 @@ public class EncryptionManager {
         return false;
     }
 
-    private byte[] xorWithKey(byte[] a, byte[] key) {
-        if(key == null || key.length == 0) return a;
-
-        byte[] out = new byte[a.length];
-        for (int i = 0; i < a.length; i++) {
-            out[i] = (byte) (a[i] ^ key[i%key.length]);
-        }
-        return out;
-    }
-
-    boolean generateMacKey(SharedPreferences prefStore) throws NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException, UnrecoverableEntryException, IOException {
+    boolean generateMacKey(SharedPreferences prefStore, @Nullable byte[] seed) throws NoSuchPaddingException, InvalidKeyException, NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException, UnrecoverableEntryException, IOException {
         String key = getHashed(MAC_KEY_ALIAS);
 
-        Map<String, ?> all = prefStore.getAll();
         if (!prefStore.contains(key)) {
             byte[] randomBytes = new byte[MAC_BIT_LENGTH / 8];
-            SecureRandom rng = new SecureRandom();
+            SecureRandom rng;
+            if(seed != null && seed.length > 0){
+                rng = new SecureRandom(seed);
+            } else {
+                rng = new SecureRandom();
+            }
+
             rng.nextBytes(randomBytes);
 
             byte[] encryptedKey = RSAEncrypt(randomBytes);
@@ -609,6 +607,16 @@ public class EncryptionManager {
         }
 
         return false;
+    }
+
+    private byte[] xorWithKey(byte[] a, byte[] key) {
+        if(key == null || key.length == 0) return a;
+
+        byte[] out = new byte[a.length];
+        for (int i = 0; i < a.length; i++) {
+            out[i] = (byte) (a[i] ^ key[i%key.length]);
+        }
+        return out;
     }
 
     SecretKey getFallbackAESKey(SharedPreferences prefStore) throws IOException, NoSuchAlgorithmException, InvalidKeyException, NoSuchProviderException, NoSuchPaddingException {
@@ -649,13 +657,9 @@ public class EncryptionManager {
     }
 
     @SuppressWarnings("WrongConstant")
-    void generateRSAKeys(Context context) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, KeyStoreException {
+    void generateRSAKeys(Context context, @Nullable byte[] seed) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, KeyStoreException {
         if (!mStore.containsAlias(RSA_KEY_ALIAS)) {
-            Calendar start = Calendar.getInstance();
-            Calendar end = Calendar.getInstance();
-            end.add(Calendar.YEAR, 25);
-
-            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(KEY_ALGORITHM_RSA, KEYSTORE_PROVIDER);
+                        KeyPairGenerator keyGen = KeyPairGenerator.getInstance(KEY_ALGORITHM_RSA, KEYSTORE_PROVIDER);
 
             KeyPairGeneratorSpec spec;
 
@@ -664,22 +668,23 @@ public class EncryptionManager {
                         .setAlias(RSA_KEY_ALIAS)
                         .setKeySize(RSA_BIT_LENGTH)
                         .setKeyType(KEY_ALGORITHM_RSA)
-                        .setEndDate(end.getTime())
-                        .setStartDate(start.getTime())
                         .setSerialNumber(BigInteger.ONE)
                         .setSubject(new X500Principal("CN = Secured Preference Store, O = Devliving Online"))
                         .build();
             } else {
                 spec = new KeyPairGeneratorSpec.Builder(context)
                         .setAlias(RSA_KEY_ALIAS)
-                        .setEndDate(end.getTime())
-                        .setStartDate(start.getTime())
                         .setSerialNumber(BigInteger.ONE)
                         .setSubject(new X500Principal("CN = Secured Preference Store, O = Devliving Online"))
                         .build();
             }
 
-            keyGen.initialize(spec);
+            if(seed != null && seed.length > 0) {
+                SecureRandom random = new SecureRandom(seed);
+                keyGen.initialize(spec, random);
+            } else {
+                keyGen.initialize(spec);
+            }
             keyGen.generateKeyPair();
         }
     }

@@ -40,20 +40,13 @@ public class MainActivity extends AppCompatActivity {
         saveButton = (Button) findViewById(R.id.save);
 
         try {
-            String bitShifter = "aaowefoiajw4f0javn290nap09jefaoij"; //Should be uniquely random for you specific app.
-            SecuredPreferenceStore.migrate(getApplicationContext(), "SPS_file", new MigrateFrom050to060("AnotherFileName", bitShifter));
-            SecuredPreferenceStore.init(getApplicationContext(), "AnotherFileName", "myPrefix", bitShifter, new DefaultRecoveryHandler());
+            byte[] seed = "SecuredSeedData".getBytes();
+            SecuredPreferenceStore.init(getApplicationContext(), seed, new DefaultRecoveryHandler());
 
             setupStore();
         } catch (Exception e) {
             // Handle error.
-            Log.e("SECURED-PREFERENCE", e.getMessage(), e);
-            try {
-                SecuredPreferenceStore.init(getApplicationContext(), new DefaultRecoveryHandler());
-                setupStore();
-            } catch (Exception ex) {
-                Log.e("SECURED-PREFERENCE", "Unable to initialize backup", ex);
-            }
+            e.printStackTrace();
         }
 
         reloadButton.setOnClickListener(new View.OnClickListener() {
@@ -91,7 +84,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         try {
-//            SecuredPreferenceStore.getSharedInstance().migrateToNewestVersion(getApplicationContext());
             reloadData();
         } catch (Exception e) {
             Log.e("SECURED-PREFERENCE", "", e);

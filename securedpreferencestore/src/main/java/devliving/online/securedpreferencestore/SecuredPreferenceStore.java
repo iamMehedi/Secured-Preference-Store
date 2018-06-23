@@ -2,6 +2,9 @@ package devliving.online.securedpreferencestore;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.Log;
+
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.security.InvalidAlgorithmParameterException;
@@ -74,6 +77,10 @@ public class SecuredPreferenceStore implements SharedPreferences {
     /**
      * Must be called once before using the SecuredPreferenceStore to initialize the shared instance.
      * You may call it in @code{onCreate} method of your application class or launcher activity
+     *
+     * @param appContext
+     * @param seed Seed to use while generating keys
+     * @param recoveryHandler
      *
      * @throws IOException
      * @throws CertificateException
