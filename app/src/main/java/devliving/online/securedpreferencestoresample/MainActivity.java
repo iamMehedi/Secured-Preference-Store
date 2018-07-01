@@ -13,7 +13,6 @@ import java.security.KeyStore;
 import java.util.List;
 
 import devliving.online.securedpreferencestore.DefaultRecoveryHandler;
-import devliving.online.securedpreferencestore.MigrateFrom050to060;
 import devliving.online.securedpreferencestore.SecuredPreferenceStore;
 
 public class MainActivity extends AppCompatActivity {
@@ -40,8 +39,13 @@ public class MainActivity extends AppCompatActivity {
         saveButton = (Button) findViewById(R.id.save);
 
         try {
-            byte[] seed = "SecuredSeedData".getBytes();
-            SecuredPreferenceStore.init(getApplicationContext(), seed, new DefaultRecoveryHandler());
+            //not mandatory, can be null too
+            String storeFileName = "securedStore";
+            //not mandatory, can be null too
+            String keyPrefix = "vss";
+            //it's better to provide one, and you need to provide the same key each time after the first time
+            byte[] seedKey = "SecuredSeedData".getBytes();
+            SecuredPreferenceStore.init(getApplicationContext(), storeFileName, keyPrefix, seedKey, new DefaultRecoveryHandler());
 
             setupStore();
         } catch (Exception e) {
