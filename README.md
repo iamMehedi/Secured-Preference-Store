@@ -23,15 +23,16 @@ compile 'online.devliving:securedpreferencestore:latest_version'
 ## Usage
 Before using the store for the first time you must initialize it
 ```
-SecuredPreferenceStore.init(getApplicationContext(), new DefaultRecoveryHandler());
+//not mandatory, can be null too
+String storeFileName = "securedStore";
+//not mandatory, can be null too
+String keyPrefix = "vss";
+//it's better to provide one, and you need to provide the same key each time after the first time
+byte[] seedKey = "SecuredSeedData".getBytes();
+SecuredPreferenceStore.init(getApplicationContext(), storeFileName, keyPrefix, seedKey, new DefaultRecoveryHandler());
 ```
 perhaps in `onCreate` of your `Application`  class or launcher `Activity`. 
 
-It is also possible to hide the use of Secure Preference Store, by specifying custom file names and key prefixes
-```
-SecuredPreferenceStore.init(getApplicationContext(), "myPreferenceFileName", "my_prefix", new DefaultRecoveryHandler());
-```
-This is best used with obfuscation tools that support string encryption.
 
 You can use the secured preference store just like the way you use the default `SharedPreferences`
 ```java
@@ -45,10 +46,25 @@ prefStore.edit().putString(TEXT_1, text1.length() > 0 ? text1.getText().toString
 prefStore.edit().putString(TEXT_2, text2.length() > 0 ? text2.getText().toString() : null).apply();
 prefStore.edit().putInt(NUMBER_1, number1.length() > 0 ? Integer.parseInt(number1.getText().toString().trim()) : 0).commit();
 ```
+You can access the underlying encryption manager to encrypt/decrypt data:
+```
+EncryptionManager encryptionManager = SecuredPreferenceStore.getSharedInstance().getEncryptionManager();
+```
 
-You can use the `EncryptionManager` to encrypt/decrypt data on your own:
+You can also use a standalone `EncryptionManager` to encrypt/decrypt data on your own:
 ```java
-EncryptionManager encryptionManager = new EncryptionManager(getApplicationContext(), getSharedPreferences("my_pref", MODE_PRIVATE));
+SharedPreferences preferences = getSharedPreferences("backingStore", MODE_PRIVATE);
+//not mandatory, can be null too
+String keyAliasPrefix = "kp";
+//not mandatory, can be null too
+byte[] bitShiftKey = "bitShiftBits".getBytes();
+EncryptionManager encryptionManager = new EncryptionManager(getApplicationContext(), preferences,
+    keyAliasPrefix, bitShiftKey, new SecuredPreferenceStore.KeyStoreRecoveryNotifier() {
+	@Override
+	public boolean onRecoveryRequired(Exception e, KeyStore keyStore, List<String> keyAliases) {
+	    return false;
+	}
+});
 EncryptionManager.EncryptedData encryptedData = encryptionManager.encrypt(bytesToEncrypt);
 byte[] decryptedData = encryptionManager.decrypt(encryptedData);
 ```
