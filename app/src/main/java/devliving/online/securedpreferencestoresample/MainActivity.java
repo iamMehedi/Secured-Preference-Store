@@ -3,6 +3,7 @@ package devliving.online.securedpreferencestoresample;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -38,8 +39,13 @@ public class MainActivity extends AppCompatActivity {
         saveButton = (Button) findViewById(R.id.save);
 
         try {
-            byte[] seed = "SecuredSeedData".getBytes();
-            SecuredPreferenceStore.init(getApplicationContext(), seed, new DefaultRecoveryHandler());
+            //not mandatory, can be null too
+            String storeFileName = "securedStore";
+            //not mandatory, can be null too
+            String keyPrefix = "vss";
+            //it's better to provide one, and you need to provide the same key each time after the first time
+            byte[] seedKey = "SecuredSeedData".getBytes();
+            SecuredPreferenceStore.init(getApplicationContext(), storeFileName, keyPrefix, seedKey, new DefaultRecoveryHandler());
 
             setupStore();
         } catch (Exception e) {
@@ -53,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     reloadData();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.e("SECURED-PREFERENCE", "", e);
                     Toast.makeText(MainActivity.this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -65,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     saveData();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Log.e("SECURED-PREFERENCE", "", e);
                     Toast.makeText(MainActivity.this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -84,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
         try {
             reloadData();
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("SECURED-PREFERENCE", "", e);
             Toast.makeText(this, "An exception occurred, see log for details", Toast.LENGTH_SHORT).show();
         }
     }
