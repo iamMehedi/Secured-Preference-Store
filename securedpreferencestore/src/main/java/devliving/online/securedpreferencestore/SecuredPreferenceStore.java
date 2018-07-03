@@ -443,7 +443,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
             if(storeName != null && !storeName.equals(DEFAULT_PREF_FILE_NAME)) {
                 prefToWrite = mContext.getSharedPreferences(storeName, Context.MODE_PRIVATE);
-                filenameChanged = prefToRead.getAll().size() > 0;
+                filenameChanged = true;
             }
 
             String storedPrefix = null;
@@ -458,7 +458,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
             prefixChanged = storedPrefix == null && keyPrefix != null && !keyPrefix.equals(EncryptionManager.DEFAULT_KEY_ALIAS_PREFIX);
 
-            if(filenameChanged || prefixChanged) {
+            if((filenameChanged || prefixChanged) && prefToRead.getAll().size() > 0) {
                 try {
                     EncryptionManager readCrypto = new EncryptionManager(mContext, prefToRead, null);
                     EncryptionManager writeCrypto = new EncryptionManager(mContext, prefToWrite, keyPrefix, bitShiftKey, null);

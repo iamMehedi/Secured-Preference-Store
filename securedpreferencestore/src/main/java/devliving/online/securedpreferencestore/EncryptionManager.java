@@ -32,6 +32,7 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.List;
 
 import javax.crypto.BadPaddingException;
@@ -688,6 +689,9 @@ public class EncryptionManager {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance(KEY_ALGORITHM_RSA, KEYSTORE_PROVIDER);
 
             KeyPairGeneratorSpec spec;
+            Calendar start = Calendar.getInstance();
+            Calendar end = Calendar.getInstance();
+            end.add(Calendar.YEAR, 100);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                 spec = new KeyPairGeneratorSpec.Builder(context)
@@ -696,12 +700,16 @@ public class EncryptionManager {
                         .setKeyType(KEY_ALGORITHM_RSA)
                         .setSerialNumber(BigInteger.ONE)
                         .setSubject(new X500Principal("CN = Secured Preference Store, O = Devliving Online"))
+                        .setStartDate(start.getTime())
+                        .setEndDate(end.getTime())
                         .build();
             } else {
                 spec = new KeyPairGeneratorSpec.Builder(context)
                         .setAlias(RSA_KEY_ALIAS)
                         .setSerialNumber(BigInteger.ONE)
                         .setSubject(new X500Principal("CN = Secured Preference Store, O = Devliving Online"))
+                        .setStartDate(start.getTime())
+                        .setEndDate(end.getTime())
                         .build();
             }
 
