@@ -46,6 +46,23 @@ public class SecuredPreferenceStore implements SharedPreferences {
 
     private static SecuredPreferenceStore mInstance;
 
+    /**
+     *
+     * @param appContext application context
+     * @param storeName optional name of the preference file
+     * @param keyPrefix optional prefix for encryption key aliases
+     * @param bitShiftingKey seed for randomization & bit shifting, enhances security on older OS versions
+     * @throws IOException
+     * @throws CertificateException
+     * @throws NoSuchAlgorithmException
+     * @throws KeyStoreException
+     * @throws UnrecoverableEntryException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchPaddingException
+     * @throws InvalidKeyException
+     * @throws NoSuchProviderException
+     * @throws MigrationFailedException
+     */
     private SecuredPreferenceStore(@NotNull Context appContext, @Nullable String storeName, @Nullable String keyPrefix,
                                    @Nullable byte[] bitShiftingKey) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException, MigrationFailedException {
         Logger.d("Creating store instance");
@@ -90,9 +107,11 @@ public class SecuredPreferenceStore implements SharedPreferences {
      * Must be called once before using the SecuredPreferenceStore to initialize the shared instance.
      * You may call it in @code{onCreate} method of your application class or launcher activity
      *
-     * @param appContext
-     * @param bitShiftingKey Seed to use while generating keys
-     * @param recoveryHandler
+     * @param appContext application context
+     * @param storeName optional name of the preference file
+     * @param keyPrefix optional prefix for encryption key aliases
+     * @param bitShiftingKey seed for randomization & bit shifting, enhances security on older OS versions
+     * @param recoveryHandler recovery handler to use if necessary
      *
      * @throws IOException
      * @throws CertificateException
@@ -487,9 +506,11 @@ public class SecuredPreferenceStore implements SharedPreferences {
                                 eValues.add(writeCrypto.encrypt(dValue));
                             }
                             editor.putStringSet(hashedKey, eValues);
-                        } else { //string
+                        } else if(entry.getValue() instanceof String) { //string
                             String dValue = readCrypto.decrypt((String) entry.getValue());
                             editor.putString(hashedKey, writeCrypto.encrypt(dValue));
+                        } else {
+                            Logger.e("Found a value that is not String or Set, key: " + hashedKey + ", value: " + entry.getValue());
                         }
                     }
 
