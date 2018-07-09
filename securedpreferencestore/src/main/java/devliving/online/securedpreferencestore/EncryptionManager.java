@@ -690,6 +690,9 @@ public class EncryptionManager {
 
             KeyPairGeneratorSpec spec;
             Calendar start = Calendar.getInstance();
+            //probable fix for the timezone issue
+            start.add(Calendar.HOUR_OF_DAY, -26);
+
             Calendar end = Calendar.getInstance();
             end.add(Calendar.YEAR, 100);
 
