@@ -2,7 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: "com.jfrog.bintray"
 
-version = "0.7.3"
+version = "0.7.4"
 
 android {
     compileSdkVersion 27
@@ -11,7 +11,7 @@ android {
     defaultConfig {
         minSdkVersion 18
         targetSdkVersion 27
-        versionCode 13
+        versionCode 14
         versionName version
     }
     buildTypes {
@@ -24,8 +24,9 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.android.support:support-annotations:27.1.1'
+
     testImplementation 'junit:junit:4.12'
-    implementation 'org.jetbrains:annotations-java5:15.0'
 }
 
 def siteUrl = "https://github.com/iamMehedi/Secured-Preference-Store"
@@ -76,7 +77,8 @@ task sourcesJar(type: Jar) {
 
 task javadoc(type: Javadoc) {
     source = android.sourceSets.main.java.srcDirs
-    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator)) + configurations.compile
+    //classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {

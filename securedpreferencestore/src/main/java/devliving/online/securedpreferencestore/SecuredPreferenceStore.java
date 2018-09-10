@@ -3,9 +3,8 @@ package devliving.online.securedpreferencestore;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
-
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,7 +50,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
      * @param appContext application context
      * @param storeName optional name of the preference file
      * @param keyPrefix optional prefix for encryption key aliases
-     * @param bitShiftingKey seed for randomization & bit shifting, enhances security on older OS versions
+     * @param bitShiftingKey seed for randomization and bit shifting, enhances security on older OS versions
      * @throws IOException
      * @throws CertificateException
      * @throws NoSuchAlgorithmException
@@ -63,7 +62,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
      * @throws NoSuchProviderException
      * @throws MigrationFailedException
      */
-    private SecuredPreferenceStore(@NotNull Context appContext, @Nullable String storeName, @Nullable String keyPrefix,
+    private SecuredPreferenceStore(@NonNull Context appContext, @Nullable String storeName, @Nullable String keyPrefix,
                                    @Nullable byte[] bitShiftingKey) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException, MigrationFailedException {
         Logger.d("Creating store instance");
         // handle migration
@@ -110,7 +109,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
      * @param appContext application context
      * @param storeName optional name of the preference file
      * @param keyPrefix optional prefix for encryption key aliases
-     * @param bitShiftingKey seed for randomization & bit shifting, enhances security on older OS versions
+     * @param bitShiftingKey seed for randomization and bit shifting, enhances security on older OS versions
      * @param recoveryHandler recovery handler to use if necessary
      *
      * @throws IOException
@@ -124,7 +123,7 @@ public class SecuredPreferenceStore implements SharedPreferences {
      * @throws NoSuchProviderException
      */
     public static void init(Context appContext, @Nullable String storeName, @Nullable String keyPrefix, @Nullable byte[] bitShiftingKey,
-                             RecoveryHandler recoveryHandler ) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException, MigrationFailedException {
+                            RecoveryHandler recoveryHandler ) throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeyException, NoSuchProviderException, MigrationFailedException {
 
         if(mInstance != null){
             Logger.w("init called when there already is a non-null instance of the class");

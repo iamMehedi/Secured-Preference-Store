@@ -7,12 +7,15 @@ import android.os.Build;
 import android.security.KeyPairGeneratorSpec;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
+import android.support.annotation.Nullable;
+import android.support.annotation.RequiresApi;
 import android.util.Base64;
 
-import org.jetbrains.annotations.Nullable;
-
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
@@ -59,6 +62,9 @@ public class EncryptionManager {
     private final int AES_BIT_LENGTH = 256;
     private final int MAC_BIT_LENGTH = 256;
     private final int GCM_TAG_LENGTH = 128;
+
+    private final int COMPAT_IV_LENGTH = 16;
+    private final int IV_LENGTH = 12;
 
     private final static String DEFAULT_CHARSET = "UTF-8";
 
@@ -263,6 +269,64 @@ public class EncryptionManager {
     }
 
     /**
+     * Doesn't delete the original file.
+     * @param fileIn file to encrypt
+     * @param fileOut file to write encrypted data
+     * @throws IOException
+     * @throws NoSuchProviderException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     * @throws NoSuchPaddingException
+     * @throws KeyStoreException
+     * @throws UnrecoverableEntryException
+     */
+    public void tryEncrypt(BufferedInputStream fileIn, BufferedOutputStream fileOut) throws IOException, NoSuchProviderException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException, KeyStoreException, UnrecoverableEntryException {
+        boolean tryAgain = false;
+
+        try {
+            encrypt(fileIn, fileOut);
+        } catch (Exception ex) {
+            if(isRecoverableError(ex)) tryAgain = tryRecovery(ex);
+            else throw ex;
+        }
+
+        if(tryAgain) {
+            setup(mContext, mPrefs, null);
+            encrypt(fileIn, fileOut);
+        }
+    }
+
+    /**
+     * Doesn't delete the original file.
+     * @param fileIn file to decrypt
+     * @param fileOut file to write decrypted data
+     * @throws IOException
+     * @throws NoSuchProviderException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     * @throws NoSuchPaddingException
+     * @throws KeyStoreException
+     * @throws UnrecoverableEntryException
+     */
+    public void tryDecrypt(BufferedInputStream fileIn, BufferedOutputStream fileOut) throws IOException, NoSuchProviderException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException, KeyStoreException, UnrecoverableEntryException {
+        boolean tryAgain = false;
+
+        try {
+            decrypt(fileIn, fileOut);
+        } catch (Exception ex) {
+            if(isRecoverableError(ex)) tryAgain = tryRecovery(ex);
+            else throw ex;
+        }
+
+        if(tryAgain) {
+            setup(mContext, mPrefs, null);
+            decrypt(fileIn, fileOut);
+        }
+    }
+
+    /**
      * tries recovery once if a Keystore error occurs
      * @param data
      * @return
@@ -391,6 +455,75 @@ public class EncryptionManager {
         return null;
     }
 
+    /**
+     *
+     * @param fileIn file to encrypt
+     * @param fileOut file to store encrypted data
+     * @throws IOException
+     * @throws NoSuchProviderException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     * @throws NoSuchPaddingException
+     */
+    public void encrypt(BufferedInputStream fileIn, BufferedOutputStream fileOut) throws IOException, NoSuchProviderException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException {
+        byte[] IV = getIV();
+        Cipher cipher = isCompatMode ? getCipherAESCompat(IV, true) : getCipherAES(IV, true);
+        CipherOutputStream cipherOut = new CipherOutputStream(fileOut, cipher);
+
+        //store IV
+        fileOut.write(IV);
+
+        byte[] buffer = new byte[4096];
+        int read;
+
+        while ((read = fileIn.read(buffer)) != -1) {
+            cipherOut.write(buffer, 0, read);
+        }
+
+        //TODO: find a way to compute MAC iteratively without loading the whole file in memory
+
+        cipherOut.flush();
+        cipherOut.close();
+
+        fileIn.close();
+    }
+
+    /**
+     *
+     * @param fileIn encrypted file
+     * @param fileOut file to store decrypted data
+     * @throws IOException
+     * @throws NoSuchProviderException
+     * @throws InvalidAlgorithmParameterException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidKeyException
+     * @throws NoSuchPaddingException
+     */
+    public void decrypt(BufferedInputStream fileIn, BufferedOutputStream fileOut) throws IOException, NoSuchProviderException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, InvalidKeyException, NoSuchPaddingException {
+        int IVLength = isCompatMode ? COMPAT_IV_LENGTH : IV_LENGTH;
+        byte[] IV = new byte[IVLength];
+
+        int read = fileIn.read(IV, 0, IVLength);
+
+        if(read == -1 || read != IVLength) throw new IllegalArgumentException("Unexpected encryption state");
+
+        //TODO: find a way to validate MAC iteratively without loading the whole file in memory
+
+        Cipher cipher = isCompatMode ? getCipherAESCompat(IV, false) : getCipherAES(IV, false);
+        CipherInputStream cipherIn = new CipherInputStream(fileIn, cipher);
+
+        byte[] buffer = new byte[4096];
+
+        while ((read = cipherIn.read(buffer)) != -1) {
+            fileOut.write(buffer, 0, read);
+        }
+        fileOut.flush();
+        fileOut.close();
+
+        cipherIn.close();
+    }
+
     public static String getHashed(String text) throws NoSuchAlgorithmException, UnsupportedEncodingException {
         final MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
@@ -446,9 +579,9 @@ public class EncryptionManager {
     byte[] getIV() throws UnsupportedEncodingException {
         byte[] iv;
         if (!isCompatMode) {
-            iv = new byte[12];
+            iv = new byte[IV_LENGTH];
         } else {
-            iv = new byte[16];
+            iv = new byte[COMPAT_IV_LENGTH];
         }
         SecureRandom rng = new SecureRandom();
         rng.nextBytes(iv);
@@ -457,9 +590,27 @@ public class EncryptionManager {
 
     /**
      *
+     * @param IV Initialisation Vector
+     * @param modeEncrypt if true then cipher is for encryption, decryption otherwise
+     * @return a Cipher
+     * @throws NoSuchPaddingException
+     * @throws NoSuchAlgorithmException
+     * @throws InvalidAlgorithmParameterException
+     * @throws InvalidKeyException
+     */
+    @TargetApi(Build.VERSION_CODES.KITKAT)
+    Cipher getCipherAES(byte[] IV, boolean modeEncrypt) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException {
+        Cipher cipher = Cipher.getInstance(AES_CIPHER);
+        cipher.init(modeEncrypt? Cipher.ENCRYPT_MODE:Cipher.DECRYPT_MODE, aesKey, new GCMParameterSpec(GCM_TAG_LENGTH, IV));
+
+        return cipher;
+    }
+
+    /**
+     *
      * @param bytes
      * @param IV
-     * @return IV & Encrypted data
+     * @return IV and Encrypted data
      * @throws NoSuchPaddingException
      * @throws NoSuchAlgorithmException
      * @throws InvalidAlgorithmParameterException
@@ -470,8 +621,7 @@ public class EncryptionManager {
      */
     @TargetApi(Build.VERSION_CODES.KITKAT)
     EncryptedData encryptAES(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, UnsupportedEncodingException {
-        Cipher cipher = Cipher.getInstance(AES_CIPHER);
-        cipher.init(Cipher.ENCRYPT_MODE, aesKey, new GCMParameterSpec(GCM_TAG_LENGTH, IV));
+        Cipher cipher = getCipherAES(IV, true);
         EncryptedData result = new EncryptedData();
         result.IV = cipher.getIV();
         result.encryptedData = cipher.doFinal(bytes);
@@ -481,7 +631,7 @@ public class EncryptionManager {
 
     /**
      *
-     * @param encryptedData - IV & Encrypted data
+     * @param encryptedData - IV and Encrypted data
      * @return decrypted data
      * @throws NoSuchPaddingException
      * @throws NoSuchAlgorithmException
@@ -493,16 +643,22 @@ public class EncryptionManager {
      */
     @TargetApi(Build.VERSION_CODES.KITKAT)
     byte[] decryptAES(EncryptedData encryptedData) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, UnsupportedEncodingException {
-        Cipher cipher = Cipher.getInstance(AES_CIPHER);
-        cipher.init(Cipher.DECRYPT_MODE, aesKey, new GCMParameterSpec(GCM_TAG_LENGTH, encryptedData.IV));
+        Cipher cipher = getCipherAES(encryptedData.IV, false);
         return cipher.doFinal(encryptedData.encryptedData);
+    }
+
+    Cipher getCipherAESCompat(byte[] IV, boolean modeEncrypt) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException, InvalidKeyException {
+        Cipher c = Cipher.getInstance(AES_CIPHER_COMPAT, BOUNCY_CASTLE_PROVIDER);
+        c.init(modeEncrypt? Cipher.ENCRYPT_MODE:Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(IV));
+
+        return c;
     }
 
     /**
      *
      * @param bytes
      * @param IV
-     * @return IV, Encrypted Data & Mac
+     * @return IV, Encrypted Data and Mac
      * @throws NoSuchPaddingException
      * @throws NoSuchAlgorithmException
      * @throws NoSuchProviderException
@@ -513,8 +669,7 @@ public class EncryptionManager {
      * @throws InvalidAlgorithmParameterException
      */
     EncryptedData encryptAESCompat(byte[] bytes, byte[] IV) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException, BadPaddingException, IllegalBlockSizeException, UnsupportedEncodingException, InvalidAlgorithmParameterException {
-        Cipher c = Cipher.getInstance(AES_CIPHER_COMPAT, BOUNCY_CASTLE_PROVIDER);
-        c.init(Cipher.ENCRYPT_MODE, aesKey, new IvParameterSpec(IV));
+        Cipher c = getCipherAESCompat(IV, true);
         EncryptedData result = new EncryptedData();
         result.IV = c.getIV();
         result.encryptedData = c.doFinal(bytes);
@@ -525,8 +680,7 @@ public class EncryptionManager {
 
     byte[] decryptAESCompat(EncryptedData encryptedData) throws UnsupportedEncodingException, NoSuchAlgorithmException, InvalidKeyException, NoSuchProviderException, NoSuchPaddingException, InvalidAlgorithmParameterException, BadPaddingException, IllegalBlockSizeException, InvalidMacException {
         if (verifyMac(encryptedData.mac, encryptedData.getDataForMacComputation())) {
-            Cipher c = Cipher.getInstance(AES_CIPHER_COMPAT, BOUNCY_CASTLE_PROVIDER);
-            c.init(Cipher.DECRYPT_MODE, aesKey, new IvParameterSpec(encryptedData.IV));
+            Cipher c = getCipherAESCompat(encryptedData.IV, false);
             return c.doFinal(encryptedData.encryptedData);
         } else throw new InvalidMacException();
     }
